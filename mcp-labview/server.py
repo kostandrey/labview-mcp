@@ -38,7 +38,7 @@ GATEWAY_VI = os.path.join(SKILL_ROOT, "gateway", "Gateway.vi")
 ARRREAD_EXE = os.path.join(SKILL_ROOT, "skill-labview-code",
                            "scripts", "arrread.exe")
 SERVER_NAME = "labview-mcp"
-SERVER_VERSION = "1.1.0"
+SERVER_VERSION = "1.1.1"
 
 
 def log(msg):
@@ -649,7 +649,7 @@ TOOLS = [
             "opposite (output-first). Learn the interface with getNode on "
             "the subVI path + lv_extract2.vbs strings BEFORE wiring; "
             "verified pane tables and gotchas: references/subvi-placement.md "
-            "in the skill-labview-code knowledge base. ", 
+            "in the skill-labview-code knowledge base. " 
             "FEEDBACK NODE TERMINAL ORDER IS RANDOM PER INSTANCE - always "
             "determine it per FN (2026-10-19: two gateway-placed FNs in one "
             "session were both Map A, refuting the creation-path theory; "
