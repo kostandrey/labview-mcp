@@ -263,9 +263,12 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   Primitive terminal order is OUTPUT-FIRST
   (Add `[0]`=x+y) - opposite rule; the `wire` response's `Name` fields
   are ground truth. **Agent-created subVIs are fully usable**: after
+- **Agent-created subVIs are fully usable**: after
   newvi + FP controls, assign the pane with the `connector` verb
   (arg1 EMPTY, arg2='L:<label>'/'U:<FP uid>'/'disconnect', arg3=0-based
   cell; recipe v3.23) - verified end-to-end (input 7 -> subVI -> 17).
+  `analyze <vi> FP` lists front-panel elements with the FP UIDs for the
+  U: form (recipe v3.24).
   A caller COPY must live in the subVI's directory (%TEMP% copies fail
   'SubVI is missing' - lv_verify/lv_runcheck handle this).
 - `loop` - add a shift register: vi_path = `path.vi%ForLoop|Loop1`,

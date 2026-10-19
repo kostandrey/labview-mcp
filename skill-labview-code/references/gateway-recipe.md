@@ -2082,6 +2082,28 @@ subVI reference resolves relative to the caller's directory); a copy in
 the SAME directory runs fine. lv_verify/lv_runcheck now place their
 check copies next to the original (gitignored *_chk.vi/*_run.vi).
 
+## v3.24 (2026-10-19) - `analyze` arg1='FP': front-panel GObjects (FP UIDs for connector)
+
+User-implemented. `analyze;<plain vi path>;FP` lists FP objects:
+
+```
+0: Panel [] UID: 10
+1: Pane [Pane] UID: 12
+2: Digital [Out1] UID: 68
+3: Digital [Num1] UID: 60
+```
+
+- The element UIDs are the FRONT-PANEL element UIDs - exactly what the
+  `connector` verb's `U:` form needs (verified: same 60/68 as getNode
+  Mode B in the v3.23 test). This removes the L:-first chicken-and-egg:
+  analyze FP -> connector U:<uid> directly.
+- FP ClassNames differ from BD/analyze names (numeric control =
+  'Digital', not 'DigitalNumericConstant'); Panel/Pane containers are
+  listed too.
+- Without arg1 (or any other arg1) analyze lists the BD as before
+  (BD ControlTerminal UIDs - Num1=82/Out1=97 in the same VI - are NOT
+  valid for connector U:).
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class
