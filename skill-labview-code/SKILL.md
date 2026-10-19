@@ -250,6 +250,16 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   Indicator, IsOnConPanel, Wiring rule (Required/Recommended/...)` -
   read a subVI's interface BEFORE wiring instead of empirical probing
   (replaces most of the old probe workflow; recipe v3.17).
+- **CHECK THE RICH IDE LIBRARIES FIRST (2026-10-19)**: the LabVIEW IDE
+  ships THOUSANDS of ready-made, tested VIs under
+  `<LV>\vi.lib\**` (incl. .llb libraries). Before generating
+  primitive-node code for any non-trivial computation (statistics,
+  histogram, filters, array ops, signal generation, file I/O...),
+  SEARCH for an existing VI first - one placed subVI call can replace
+  10-20 primitives. NEVER build a histogram/statistics chain from
+  Add/Divide/SR primitives when a library VI exists. Search + workflow +
+  verified pane tables: `references/subvi-placement.md` (proven:
+  Histogram.vi, 1e6 samples run-verified, wired in ONE batch).
 - **SubVIs (NI library / vi.lib / .llb members)**: `place` arg1 =
   `any:0<full path>` - the literal `any:0` prefix places the FILE at
   <path> (e.g. `any:0C:\...\vi.lib\Analysis\1siggen.llb\Gaussian White

@@ -2104,6 +2104,16 @@ User-implemented. `analyze;<plain vi path>;FP` lists FP objects:
   (BD ControlTerminal UIDs - Num1=82/Out1=97 in the same VI - are NOT
   valid for connector U:).
 
+## v3.25 (2026-10-19) - RULE: check the rich IDE libraries before building by hand
+
+The IDE ships thousands of ready-made VIs under `<LV>\vi.lib\**`
+(incl. .llb). Before generating primitive-node code for any non-trivial
+computation, SEARCH for an existing VI first - one subVI call can
+replace 10-20 primitives. Full rule + search command + the proven
+Histogram.vi case (1e6 samples run-verified, wired in ONE batch):
+`references/subvi-placement.md`. NEVER build a histogram/statistics
+chain from Add/Divide/SR primitives when a library VI exists.
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class

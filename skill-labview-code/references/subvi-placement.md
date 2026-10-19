@@ -4,6 +4,31 @@ Companion to gateway-recipe.md v3.16/v3.17/v3.20. Read the SKILL.md
 `place`/`getNode` bullets first; this file holds the **verified
 connector-pane tables** and per-VI quirks.
 
+## CHECK THE RICH IDE LIBRARIES BEFORE BUILDING BY HAND (2026-10-19)
+
+The LabVIEW IDE ships THOUSANDS of ready-made, tested VIs under
+`<LV>\vi.lib\**` (incl. .llb libraries). Before generating primitive-node
+code for any non-trivial computation (statistics, histogram, filters,
+array ops, signal generation, file I/O...), SEARCH for an existing VI
+first - one placed subVI call can replace 10-20 primitives:
+
+```
+find "/c/Program Files/National Instruments/LabVIEW 2020/vi.lib" \
+  -iname "*.vi" -o -iname "*.llb" | grep -i <topic>
+```
+
+- place: `place;<vi>;any:0<full path to .vi or .llb\\member.vi>;<x,y>;<label>`
+  (paths with spaces work; the 0 is literal)
+- read the pane with `getNode;...;terms` (cell index == Terms[] index),
+  wire by CELL NUMBER, then `errors` must be empty before running.
+- Proven example: Histogram.vi (vi.lib\Analysis\baseanly.llb) -
+  wired in ONE batch, zero broken wires, run-verified on 1e6 samples
+  (h(x) summed to exactly N). Pane table below. Same library:
+  Std Deviation and Variance.vi.
+- Prefer .llb members that are already connector-wired; NEVER build a
+  histogram/statistics chain from Add/Divide/SR primitives when a
+  library VI exists.
+
 ## Locating and reading a subVI's interface
 
 ```
