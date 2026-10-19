@@ -1,0 +1,32 @@
+# --- service / temporary files (extract results, scratch, run copies) ---
+/_service/
+
+# --- Python ---
+__pycache__/
+*.pyc
+/build/
+dist/
+*.egg-info/
+venv/
+.venv/
+
+# --- logs ---
+*.log
+
+# --- LabVIEW scratch/temp artifacts ---
+*_run.vi
+*_tmp.vi
+*_chk.vi
+*_probe.vi
+*.aliases
+*.lvlps
+
+# --- large offline NI documentation mirror (copyright + ~70 MB; keep local) ---
+# search_docs/read_doc tools work only when this folder is present locally
+/help/
+
+# --- OS / editor noise ---
+Thumbs.db
+Desktop.ini
+~$*
+nul

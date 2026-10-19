@@ -1,0 +1,11 @@
+wire;C:\LabView skill\gen\pi_golden3.vi;FN1|PI0;n|0|c|0
+loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:0;-2
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:0;0
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:1;0
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:2;0
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:3;0
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:4;0
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:5;0
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:6;0
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:7;0
+wires;C:\LabView skill\gen\pi_golden3.vi

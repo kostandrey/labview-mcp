@@ -1,0 +1,15 @@
+newvi;;C:\LabView skill\gen\sr_golden.vi
+place;C:\LabView skill\gen\sr_golden.vi;function:2002;80,100;L1
+place;C:\LabView skill\gen\sr_golden.vi;numctl;20,300;Num1
+place;C:\LabView skill\gen\sr_golden.vi;numind;20,400;Out1
+place;C:\LabView skill\gen\sr_golden.vi;numconst;20,450;N5
+place;C:\LabView skill\gen\sr_golden.vi%ForLoop|L1;add;150,150;A1
+loop;C:\LabView skill\gen\sr_golden.vi%ForLoop|L1;addSR;120;SR1
+wire;C:\LabView skill\gen\sr_golden.vi;Num1|L1;c|0|slo0|0
+wire;C:\LabView skill\gen\sr_golden.vi;L1|A1;sli0|0|n|2
+wire;C:\LabView skill\gen\sr_golden.vi;L1|A1;i|0|n|1
+wire;C:\LabView skill\gen\sr_golden.vi;A1|L1;n|0|sri0|0
+wire;C:\LabView skill\gen\sr_golden.vi;L1|Out1;sro0|0|c|0
+wire;C:\LabView skill\gen\sr_golden.vi;N5|L1;c|0|n|0
+setval;C:\LabView skill\gen\sr_golden.vi%NumericConstant|N5;5;dec
+wires;C:\LabView skill\gen\sr_golden.vi

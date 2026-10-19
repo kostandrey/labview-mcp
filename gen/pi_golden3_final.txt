@@ -1,0 +1,10 @@
+place;C:\LabView skill\gen\pi_golden3.vi;multiply;200,550;MUL4
+place;C:\LabView skill\gen\pi_golden3.vi;any:1053;260,600;DIV2
+place;C:\LabView skill\gen\pi_golden3.vi;numind;320,650;PI1
+wire;C:\LabView skill\gen\pi_golden3.vi;FN1|MUL4;n|0|n|2
+wire;C:\LabView skill\gen\pi_golden3.vi;FourConst|MUL4;c|0|n|1
+wire;C:\LabView skill\gen\pi_golden3.vi;MUL4|DIV2;n|0|n|2
+wire;C:\LabView skill\gen\pi_golden3.vi;NConst|DIV2;c|0|n|1
+wire;C:\LabView skill\gen\pi_golden3.vi;DIV2|PI1;n|0|c|0
+!loop;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;tunnel:7;0
+wires;C:\LabView skill\gen\pi_golden3.vi
