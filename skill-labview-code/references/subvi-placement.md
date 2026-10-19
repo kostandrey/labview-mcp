@@ -45,6 +45,57 @@ cscript //nologo mcp-labview\scripts\lv_extract2.vbs "<subvi>.vi" <outdir>
   a subVI until a human connects the pane (and it must be SAVED;
   getNode-on-temp-copy reads the disk state).
 
+## Finding the right VI AND its documentation (Linear Fit case study, 2026-10-19)
+
+Worked example: "do a linear fit". Proven end-to-end; the same five
+steps work for any non-primitive VI.
+
+**1. Find the VI** (grep vi.lib, not the whole LV dir - `examples\`
+noise comes first; API VIs live under vi.lib):
+
+```
+find "/c/Program Files/National Instruments/LabVIEW 2020/vi.lib" \
+  -iname "*.vi" -o -iname "*.llb" | grep -i linear
+```
+
+-> `vi.lib\Analysis\6fits.llb`: Linear Fit.vi (polymorphic parent) +
+(LS)/(Bisquare)/(LAR) instances, General (LS) Linear Fit, Linear Fit
+Coefficients, Linear Fit Intervals... `6fits.llb` = the fitting
+library; `7linalg.llb` = linear algebra; `gmath.chm` = their docs.
+
+**2. Read the connector pane**: `getNode;<path>;terms`. A FRESH .llb
+member load can fail ONCE with `Hex 0x3E8 The VI is not in a state
+compatible with this operation` - just retry the same command (the
+retry worked; do not conclude the VI is broken).
+
+**3. Read the embedded documentation** with lv_extract2.vbs - extract
+the POLYMORPHIC PARENT, not the instance: the instance's
+`_strings.txt` often has EMPTY `<DESC>`; the parent carries the VI
+description plus the full per-terminal NI descriptions. The parent's
+header also tells you WHERE the printed documentation lives:
+
+```
+<HELP_PATH><PATH type="absolute"><<helpdir>><SEP>gmath.chm</PATH></HELP_PATH>
+<HELP_TAG>Linear_Fit.html</HELP_TAG>
+```
+
+**4. Decompile that CHM and read the page** (7-Zip, then strip tags):
+
+```
+"/c/Program Files/7-Zip/7z.exe" x -o"<outdir>" \
+  "/c/Program Files/National Instruments/LabVIEW 2020/help/gmath.chm" "*Linear_Fit*"
+```
+
+The page is the full spec: terminal semantics, defaults (tolerance
+0.0001), enum values (method: 0=Least Square, 1=LAR, 2=Bisquare), the
+algorithm equations, wiring notes.
+
+**5. Online NI docs are a LAST resort**: both
+ni.com/docs/.../labview-api-ref and zone.ni.com/<help-version> pages
+are JavaScript shells - the `fetch` tool gets only navigation chrome,
+no content. The local CHM is the same content and always works
+offline.
+
 ## Verified connector panes (LV 2020)
 
 ### Histogram.vi - `vi.lib\Analysis\baseanly.llb`
@@ -74,6 +125,30 @@ cscript //nologo mcp-labview\scripts\lv_extract2.vbs "<subvi>.vi" <outdir>
 
 One call gives mean AND sigma - prefer it over Mean.vi (whose pane
 probe returned empty).
+
+### Linear Fit.vi - `vi.lib\Analysis\6fits.llb` (polymorphic parent)
+
+| terminal | cell | direction | type / notes |
+|---|---|---|---|
+| Y | 0 | in | 1D DBL array, dependent values |
+| Best Linear Fit | 4 | out | 1D DBL array, fitted y-values |
+| X | 5 | in | 1D DBL array, same size as Y |
+| slope | 6 | out | DBL |
+| Weight | 7 | in | optional; unwired = all 1 |
+| intercept | 8 | out | DBL |
+| tolerance | 9 | in | <=0 -> default 0.0001 (LAR/Bisquare only) |
+| method | 11 | in | enum: 0 Least Square (default), 1 LAR, 2 Bisquare |
+| parameter bounds | 12 | in | optional cluster (slope/intercept min/max) |
+| residue | 14 | out | weighted mean (abs.) error |
+| error | 15 | out | I32 error **code** (doc: wire to Error Cluster From Error Code) |
+
+Cells 1,2,3,10,13 = `not linked` (empty).
+The **(LS) instance** has the same pane MINUS tolerance/method/
+parameter bounds (its cells 9-13 are `not linked`). Terminal types
+from the strings export; full terminal descriptions live on the
+PARENT (see step 3 above). After placing, probe the PLACED node
+(`%Node|<label>`) - its Terms[] is ground truth and may differ from
+the parent pane.
 
 ## Style-code terminal maps (LV 2020, gateway-verified 2026-10-19)
 

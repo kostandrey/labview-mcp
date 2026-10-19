@@ -2114,6 +2114,18 @@ Histogram.vi case (1e6 samples run-verified, wired in ONE batch):
 `references/subvi-placement.md`. NEVER build a histogram/statistics
 chain from Add/Divide/SR primitives when a library VI exists.
 
+## v3.26 (2026-10-19) - finding a library VI's documentation (Linear Fit case study)
+
+How to find the docs of any vi.lib VI: lv_extract2 the POLYMORPHIC
+PARENT (instances often have empty DESC) -> its `_strings.txt` header
+has HELP_PATH + HELP_TAG (e.g. gmath.chm / Linear_Fit.html) -> 7z x
+that CHM -> read the HTML page (defaults, enum values, algorithm).
+Online ni.com reference pages are JavaScript shells for the fetch
+tool - the local CHM is the reliable source. Also: a fresh .llb member
+load can fail ONCE with 0x3E8 "not in a state compatible" - retry.
+Full case study + Linear Fit pane table (6fits.llb):
+`references/subvi-placement.md`.
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class

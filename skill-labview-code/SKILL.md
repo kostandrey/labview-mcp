@@ -260,6 +260,12 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   Add/Divide/SR primitives when a library VI exists. Search + workflow +
   verified pane tables: `references/subvi-placement.md` (proven:
   Histogram.vi, 1e6 samples run-verified, wired in ONE batch).
+  DOCUMENTATION for a library VI: lv_extract2 the POLYMORPHIC PARENT
+  (instances have empty DESC) - its `_strings.txt` gives per-terminal
+  DESC plus HELP_PATH/HELP_TAG naming the CHM + page (e.g. gmath.chm /
+  Linear_Fit.html); 7z x that CHM and read the page. Online ni.com
+  pages are JS shells for `fetch` - the local CHM is the reliable
+  source (proven on Linear Fit, 6fits.llb).
 - **SubVIs (NI library / vi.lib / .llb members)**: `place` arg1 =
   `any:0<full path>` - the literal `any:0` prefix places the FILE at
   <path> (e.g. `any:0C:\...\vi.lib\Analysis\1siggen.llb\Gaussian White
