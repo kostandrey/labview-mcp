@@ -2014,6 +2014,37 @@ SKILL.md Mode 2):
    shows at out[0]. To verify init at runtime use N=1 (out[0]=init);
    with N>1 the last indicator value is independent of init.
 
+## v3.22 (2026-10-19) - TUPLE-DESCRIPTION BUG: one malformed tool drops ALL MCP tools
+
+**Incident**: a stray trailing comma in server.py's gateway description
+(`"...knowledge base. ",` inside the parenthesized concatenation) turned
+it into a 2-string TUPLE. JSON serialization then emitted
+`"description": [...]` (array), violating the MCP spec (Tool.description
+must be a string). The server handshaked and answered tools/list
+perfectly - but Zed's strict deserializer rejected the whole response
+(Zed.log: `invalid type: sequence, expected a string at ...` - the
+column points INTO the tools/list response, NOT into settings.json) and
+registered ZERO tools. Symptom: "MCP is running. No MCP tools are
+exposed" - the trap that forced terminal-fallback driving of
+lv_gateway.vbs.
+
+**RULE (mandatory after EVERY edit to server.py tool definitions):**
+
+```
+python mcp-labview/scripts/validate_tools.py [path-to-server.py]
+```
+
+- Runs the real stdio handshake, checks EVERY tool: name non-empty
+  string, description STRING, inputSchema object. Exit 0/1/2.
+- Verified: fixed server -> 13 tools 0 invalid; the broken backup ->
+  `INVALID gateway: description is list`.
+- A syntactically valid server.py (ast.parse passes) is NOT enough -
+  the bug was a runtime TYPE error only visible in the serialized JSON.
+
+**Distributables discipline**: the 1.1.0 wheel/tar.gz carried the bug;
+version bumped to 1.1.1, rebuilt, old dist removed from git, v1.1.0
+GitHub release marked broken, v1.1.1 published with fresh assets.
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class

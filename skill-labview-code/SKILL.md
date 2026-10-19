@@ -103,6 +103,12 @@ reveal the SAVED state, not unsaved IDE edits.
 
 **Composite helper scripts (mcp-labview/scripts, gateway v3.21-era,
 all tested 2026-10-19 - prefer these over raw verb sequences):**
+- `validate_tools.py [server.py]` - MANDATORY after every edit to
+  server.py tool definitions: runs the stdio handshake and checks every
+  tool (name/description must be strings, inputSchema an object). One
+  malformed tool (e.g. a stray comma making the description a tuple ->
+  JSON array) makes strict clients like Zed drop ALL tools while the
+  server itself handshakes fine (recipe v3.22). Exit 0=valid.
 - `lv_loop_scaffold.vbs <gw> <vi> <loopLabel> <x,y[,W,H]> <NconstLabel> <Nvalue> [SRlabel [SRy [Nxy]]]`
   - one-shot loop skeleton: place ForLoop + N constant + setval + wire
     N (c|0|n|0) + optional addSR + set tunnels Regular. WARNING it
