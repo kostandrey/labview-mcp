@@ -2045,6 +2045,43 @@ python mcp-labview/scripts/validate_tools.py [path-to-server.py]
 version bumped to 1.1.1, rebuilt, old dist removed from git, v1.1.0
 GitHub release marked broken, v1.1.1 published with fresh assets.
 
+## v3.23 (2026-10-19) - `connector` verb: agent-created subVIs are now FULLY usable
+
+User-implemented. `connector;<plain vi path>;<arg1 EMPTY>;arg2;arg3`:
+- arg2 = 'L:<FP control label>' | 'U:<FP-element UID>' | 'disconnect'
+- arg3 = 0-based connector-pane cell index ('Control[i]'; cell 0 usable)
+
+**CALL-SLOT TRAP (cost 6 failed tests)**: arg1 must be EMPTY - the spec
+lives in arg2/arg3. Passing the spec in arg1 -> 'ERROR 85: Scan From
+String (arg 1)'.
+
+Verified on gen\conn_test.vi (sr_golden copy, Num1 control / Out1
+indicator):
+- L:Num1->1, L:Out1->2: getNode Mode B shows Control[1]=Num1
+  (Indicator:0), Control[2]=Out1 (Indicator:1) - SAVED state.
+- U:60 (the FP-element UID getNode reports) -> cell 3: OK.
+- U:82 (the BD ControlTerminal UID analyze reports) -> 'ERROR -1:
+  GObject with ID not found' - **U: needs the FP-element UID, NOT the
+  BD terminal UID**. L: is the primary form; the FP UID is only
+  known after a first L: connection (or from getNode on a saved file).
+- disconnect '2' -> Control[2] 'not linked'.
+- Connecting a control to another cell RELOCATES it (old cell clears).
+
+### END-TO-END SUBVI PROOF (caller_test.vi)
+
+Placed conn_test.vi into a copy of sr_golden via `any:0<path>`, wired
+PC1(7) -> SUB1 Terms[1] (Name: Num1) and SUB1 Terms[0] (Name: Out1) ->
+indicator, ran: **PO = 17 = 7 + 10** - input propagated through the
+agent-created subVI, computed, returned. Pane cell == subVI Terms[]
+index confirmed for agent-created panes.
+
+### GOTCHA: copies of subVI callers need the SAME directory
+
+caller_test.vi copies in %TEMP% fail 0x3EB 'SubVI is missing' (the
+subVI reference resolves relative to the caller's directory); a copy in
+the SAME directory runs fine. lv_verify/lv_runcheck now place their
+check copies next to the original (gitignored *_chk.vi/*_run.vi).
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class

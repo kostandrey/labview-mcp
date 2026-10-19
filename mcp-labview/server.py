@@ -38,7 +38,7 @@ GATEWAY_VI = os.path.join(SKILL_ROOT, "gateway", "Gateway.vi")
 ARRREAD_EXE = os.path.join(SKILL_ROOT, "skill-labview-code",
                            "scripts", "arrread.exe")
 SERVER_NAME = "labview-mcp"
-SERVER_VERSION = "1.1.1"
+SERVER_VERSION = "1.2.0"
 
 
 def log(msg):
@@ -316,7 +316,7 @@ def tool_fetch_ni_doc(args):
             % (url, title, cap(body, 60000)))
 
 
-WRITE_VERBS = ("newvi", "place", "wire", "delete", "loop", "setval")
+WRITE_VERBS = ("newvi", "place", "wire", "delete", "loop", "setval", "connector")
 
 
 def tool_gateway(args):
@@ -638,6 +638,13 @@ TOOLS = [
             "legal wire = src isSource:1 AND dst isSource:0; 1/1 = "
             "output-output, 0/0 = input-input (both broken:1). 'wire ok' = "
             "created, not legal - read the flags. "
+            "connector (vi_path=plain VI path, arg1 EMPTY, arg2='L:<FP "
+            "control label>' or 'U:<FP-element UID>' - the UID getNode Mode "
+            "B reports, NOT the block-diagram terminal UID - or "
+            "'disconnect', arg3=0-based pane cell index): assigns/dismisses "
+            "connector-pane terminals, making newvi-created VIs fully "
+            "usable subVIs (verified end-to-end: pane cell = subVI Terms[] "
+            "index). Reconnecting a control to another cell RELOCATES it. "
             "place arg1 types: the small named set (Add, Numeric Constant, "
             "...) or 'any:<styleCode>' for anything else (Feedback Node = "
             "any:2353; codes in C:\\LabView skill\\style_codes.json). "
@@ -687,11 +694,11 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "verb": {"type": "string", "enum": ["ping", "analyze", "listmem", "wires", "getNode", "errors", "newvi", "place", "wire", "delete", "loop", "setval"], "description": "Read verbs (incl. getNode = terminal/connector-pane info, errors = IDE Error-List content, empty = clean) copy the target to temp; write verbs (newvi/place/wire/delete/loop/setval) edit and save the real file"},
+                "verb": {"type": "string", "enum": ["ping", "analyze", "listmem", "wires", "getNode", "errors", "newvi", "place", "wire", "delete", "loop", "setval", "connector"], "description": "Read verbs (incl. getNode = terminal/connector-pane info, errors = IDE Error-List content, empty = clean) copy the target to temp; write verbs (newvi/place/wire/delete/loop/setval/connector) edit and save the real file"},
                 "vi_path": {"type": "string", "description": "Target VI, optionally with %Class|Label resolver suffix (place/loop/setval). For newvi leave empty"},
                 "arg1": {"type": "string", "description": "newvi: save path. place: object type. delete: class name ('GObject' works for any object, 'Wire' for wires). loop: 'addSR' or 'tunnel:<idx>'/'tunnel:U<uid>'. setval: value. wire: 'srcLabel|dstLabel'. getNode: 'terms' (only mode supported)"},
-                "arg2": {"type": "string", "description": "place: 'x,y' or 'x,y,W,H' (W,H REQUIRED for growable nodes AND for FP objects - it is the FRONT-PANEL ITEM SIZE; 0 makes the item 0-size/unreadable on the FP). delete: 'U:<uid>' or 'L:<label>' (UIDs come from analyze/wires). loop: Y position, or for tunnel: arg1: -2=count, -1=status, 0/1/2=set IndexMode. setval: dec|frc|str. wire: 'srcKind|srcIdx|dstKind|dstIdx'. SHIFT REGISTERS: kind 's'+l|r+i|o+input# (slo=left outside INOUT/init-sink, sli=left inside OUTPUT, sri=right inside INOUT, sro=right outside OUTPUT); the IDX FIELD after '|' = which SR (0-based addSR order). Regular SRs: input# always 0 (sli1 = multi-input SR input #1 -> ERROR 1055). SR must pre-exist: create with loop addSR first. Ex: 'c|0|slo0|0' wires a control to SR0 init; 'sro0|0|c|0' wires SR0 final value out. Other kinds: c=terminal c|0, n=Terms[] index (ForLoop only n|0=N), i=loop counter"},
-                "arg3": {"type": "string", "description": "place: label ('-' = none). loop: label. delete: unused"}
+                "arg2": {"type": "string", "description": "place: 'x,y' or 'x,y,W,H' (W,H REQUIRED for growable nodes AND for FP objects - it is the FRONT-PANEL ITEM SIZE; 0 makes the item 0-size/unreadable on the FP). delete: 'U:<uid>' or 'L:<label>' (UIDs come from analyze/wires). loop: Y position, or for tunnel: arg1: -2=count, -1=status, 0/1/2=set IndexMode. setval: dec|frc|str. wire: 'srcKind|srcIdx|dstKind|dstIdx'. connector: 'L:<FP control label>' or 'U:<FP-element UID>' (from getNode Mode B - NOT the block-diagram terminal UID) or 'disconnect'. SHIFT REGISTERS: kind 's'+l|r+i|o+input# (slo=left outside INOUT/init-sink, sli=left inside OUTPUT, sri=right inside INOUT, sro=right outside OUTPUT); the IDX FIELD after '|' = which SR (0-based addSR order). Regular SRs: input# always 0 (sli1 = multi-input SR input #1 -> ERROR 1055). SR must pre-exist: create with loop addSR first. Ex: 'c|0|slo0|0' wires a control to SR0 init; 'sro0|0|c|0' wires SR0 final value out. Other kinds: c=terminal c|0, n=Terms[] index (ForLoop only n|0=N), i=loop counter"},
+                "arg3": {"type": "string", "description": "place: label ('-' = none). loop: label. delete: unused. connector: 0-based connector-pane cell index (Control[i]; cell 0 is usable)"}
             },
             "required": ["verb"]
         }

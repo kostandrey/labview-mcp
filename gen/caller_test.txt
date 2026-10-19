@@ -1,0 +1,6 @@
+place;C:\LabView skill\gen\caller_test.vi;any:0C:\LabView skill\gen\conn_test.vi;400,400;SUB1
+place;C:\LabView skill\gen\caller_test.vi;numconst;300,400;PC1
+setval;C:\LabView skill\gen\caller_test.vi%NumericConstant|PC1;7;dec
+place;C:\LabView skill\gen\caller_test.vi;numind;500,400;PO
+wire;C:\LabView skill\gen\caller_test.vi;PC1|SUB1;c|0|n|1
+wire;C:\LabView skill\gen\caller_test.vi;SUB1|PO;n|0|c|0

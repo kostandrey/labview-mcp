@@ -123,8 +123,7 @@ End If
 ' 0x3EB = VI not executable = FAIL; a successful start = executable.
 Dim fso, tmpDir, tmpVi, base, app2, vi2
 Set fso = CreateObject("Scripting.FileSystemObject")
-tmpDir = fso.GetSpecialFolder(2) & "\\lv_mcp"
-If Not fso.FolderExists(tmpDir) Then fso.CreateFolder tmpDir
+tmpDir = fso.GetParentFolderName(vi)   ' SAME dir (see lv_runcheck note)
 base = fso.GetBaseName(vi)
 tmpVi = tmpDir & "\\" & base & "_chk.vi"
 fso.CopyFile vi, tmpVi, True

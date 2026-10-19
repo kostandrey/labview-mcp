@@ -262,8 +262,12 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   trap: `references/subvi-placement.md` + recipe v3.16/v3.20.
   Primitive terminal order is OUTPUT-FIRST
   (Add `[0]`=x+y) - opposite rule; the `wire` response's `Name` fields
-  are ground truth. A `newvi`-created VI has NO connector pane - it
-  cannot be used as a subVI until a human connects and saves the pane.
+  are ground truth. **Agent-created subVIs are fully usable**: after
+  newvi + FP controls, assign the pane with the `connector` verb
+  (arg1 EMPTY, arg2='L:<label>'/'U:<FP uid>'/'disconnect', arg3=0-based
+  cell; recipe v3.23) - verified end-to-end (input 7 -> subVI -> 17).
+  A caller COPY must live in the subVI's directory (%TEMP% copies fail
+  'SubVI is missing' - lv_verify/lv_runcheck handle this).
 - `loop` - add a shift register: vi_path = `path.vi%ForLoop|Loop1`,
   arg1 = `addSR`, arg2 = Y position, arg3 = label (a shift register has no
   label - the loop gets relabeled if it had none).

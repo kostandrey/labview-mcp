@@ -29,7 +29,9 @@ If Not fso.FileExists(srcVi) Then
     WScript.Echo "ERROR: VI not found: " & srcVi
     WScript.Quit 1
 End If
-tmpDir = fso.GetSpecialFolder(2) & "\lv_mcp"
+' SAME dir: subVI refs are stored relative to the caller - a copy in
+' %TEMP% fails with "SubVI is missing" (verified 2026-10-19)
+tmpDir = fso.GetParentFolderName(srcVi)
 If Not fso.FolderExists(tmpDir) Then fso.CreateFolder tmpDir
 base = fso.GetBaseName(srcVi)
 tmpVi = tmpDir & "\" & base & "_run.vi"
