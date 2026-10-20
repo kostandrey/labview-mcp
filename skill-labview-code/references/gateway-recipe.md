@@ -2126,6 +2126,51 @@ load can fail ONCE with 0x3E8 "not in a state compatible" - retry.
 Full case study + Linear Fit pane table (6fits.llb):
 `references/subvi-placement.md`.
 
+## v3.27 (2026-10-20) - universal FP value I/O (arrread v2) + typed-control zoo
+
+Revised `arrread` into a UNIVERSAL front-panel value tool (set/get ALL
+types; see SKILL.md 'Runtime value I/O'). Verified end-to-end:
+
+- **Documented semantics** (axprop/SetControlValue.html, GetControlValue.html):
+  value is a variant - numeric/Boolean/string/array; "a cluster is
+  represented as an array of variants in ActiveX"; FIRST GetControlValue
+  on a VI whose FP was never shown returns DEFAULT values (root cause of
+  the cross-process set/get trap).
+- **Type matrix verified**: every scalar variant type (i8..i64, u8..u64,
+  sgl, dbl) coerces into numeric controls AND round-trips exactly on
+  typed controls; string/bool; 1D arrays (bare double[], ai: coerced
+  element-wise into DBL arrays, as: string arrays); 2D (a2:, reads back
+  as rank-2 variant matrix); clusters c:(b:true,i32:42,s:boom) on a REAL
+  error cluster; nested array-in-cluster c:(au8:[9,8,7],i32:42) resizes
+  the inner array. Functional: cycle Sort 1D Array.vim [5,1,3] -> [1,3,5].
+- **Wrong-type SetControlValue is SILENTLY IGNORED** (no COM error, value
+  unchanged) - the tool prints an ECHO after every set; always check it.
+- **Typed-control zoo trick**: the gateway `place any:0<.ctl path>` can
+  place ANY stock control file - `vi.lib\functionblocks\FB Property\FB
+  Overlay {I8,I16,I32,I64,U8,U16,U32,U64,SGL,DBL,String,Bool}.ctl` gives
+  every numeric representation (regression zoo: gen\fpzoo.vi). Note:
+  FB Overlay Bool.ctl reads back as UInt16 (65535) - it is not a plain
+  boolean; use a toggle switch/LED for boolean tests.
+- **Malleable .vim VIs are ready-made typed-array targets** (no FP
+  building needed): Sort 1D Array.vim 'unsorted array'/'sorted array'
+  (DBL 1D), Shuffle 2D Array.vim 'array' (DBL 2D). The tool can drive
+  any vi.lib VI's FP controls in-memory (SetControlValue does NOT save
+  the file) - Clear Errors.vi 'error in (no error)' = mixed cluster.
+- **LIMITATION (feature request)**: placing elements INTO FP array/cluster
+  shells via container resolver (`%Cluster|Clu1`) lands them on the PANE
+  at absolute coords - the shells stay empty ("Control contains no
+  elements", undefined type, broken 2-source wires). Gateway would need:
+  for FP containers owner = the resolved GObject, not the Panel. BD
+  structure placement is unaffected. Workaround: place a stock .ctl that
+  already contains the array/cluster, or build the FP by hand.
+- **Top-level FP wiring verified**: `wire;<vi>;<srcLabel>|<dstLabel>;<srcK>|<srcI>|<dstK>|<dstI>`
+  e.g. `NumIn|NumOut;c|0|c|0` - kind 'c' covers control/indicator
+  terminals; no container needed. (arg1 is src|dst labels, NOT two ids.)
+- `Numeric.Representation` is scriptable Read/Write (lvscript, 0=EXT..14=
+  FXP) - a possible future Gateway verb for changing representations.
+- gen\fpzoo.vi = regression zoo (pass-through scalars + typed controls
+  + DatumCtl nested-array cluster); errors empty; committed.
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class

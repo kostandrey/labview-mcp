@@ -398,17 +398,20 @@ def tool_gateway_batch(args):
 
 
 def tool_arrread(args):
-    """Set/read array (and scalar) control values on a saved .vi and run it,
-    via the proven arrread.exe C# helper. The ONLY reliable way through MCP
-    to verify array-input VIs: 'cycle' = set+run+read in ONE process, so it
-    works even when the VI's window is closed (set and get in SEPARATE
-    processes return stale/empty data - cross-process persistence trap).
-    'values' is a comma-separated list, e.g. "5,1,3" (2D: rows via ';').
+    """Universal FP control/indicator value I/O via the arrread.exe C# helper
+    (revised 2026-10-20): sets/reads ALL types - numerics of any representation,
+    strings, booleans, 1D/2D arrays (typed variant arrays), clusters (array of
+    variants). 'cycle' = set+echo+run+poll-read in ONE process (the only reliable
+    mode; separate-process set/get hits the cross-process persistence trap).
+    'values' grammar: bare number = double scalar; bare comma-list = double[];
+    typed prefixes dbl: sgl: i8..i64 u8..u64 s: b: a: ai: as: ab: ad:
+    a2:[[1,2],[3,4]] ai2: au8: ... ; cluster: c:(1,s:hi,b:true,ai:[1,2]).
     """
     mode = args["mode"]
     vi = args["vi_path"]
     ctl = args["control"]
     values = args.get("values") or ""
+    outctl = args.get("outctl") or ""
     if not os.path.isfile(ARRREAD_EXE):
         return ("ERROR: arrread.exe not found at %s - see " % ARRREAD_EXE +
                 "C:\\LabView skill\\skill-labview-code\\references\\"
@@ -418,6 +421,8 @@ def tool_arrread(args):
     cmd = [ARRREAD_EXE, mode, vi, ctl]
     if values:
         cmd.append(values)
+    if outctl:
+        cmd.append(outctl)
     return run(cmd, timeout=180)
 
 
@@ -739,28 +744,38 @@ TOOLS = [
     {
         "name": "arrread",
         "description": (
-            "Set/read array (and scalar) control values on a SAVED .vi and "
-            "run it, via the proven arrread.exe helper. The ONLY reliable "
-            "way to verify array-input VIs from MCP. Modes: 'get' (read a "
-            "control: rank=.. len=.. [..]), 'set' (write DBL values), "
-            "'setint' (write I32), 'run' (run the VI), 'cycle' (set + run + "
-            "read in ONE process - DEFAULT, works even with the VI window "
-            "closed; set/get in separate processes hit the cross-process "
-            "persistence trap and return stale/empty data). 'values' is "
-            "comma-separated, e.g. \"5,1,3\"; required for "
-            "set/setint/cycle. Example: cycle on "
-            "gen\\sortArr_tmp.vi InputArray \"5,1,3\" -> out len=3 [1, 3, "
-            "5]. Requires the VI to be saved and not open for edit in a "
-            "stale background instance. set/setint/cycle WRITE control "
-            "values - for user-provided VIs run them on a copy first per "
-            "the gateway copy-first rule."),
+            "Universal front-panel value I/O on a SAVED .vi (revised "
+            "2026-10-20): set/read controls and indicators of ALL types - "
+            "numerics of any representation (U8..U64, I8..I64, SGL, DBL), "
+            "strings, booleans, 1D/2D arrays (typed variant arrays), and "
+            "clusters (array of variants, mixed element types). Modes: 'get' "
+            "(print value + actual variant type), 'set' (typed value grammar), "
+            "'setint' (legacy alias for ai:), 'run', 'cycle' (set + echo + run "
+            "+ poll-read in ONE process - DEFAULT and the only reliable mode; "
+            "separate-process set/get returns stale/defaults - documented "
+            "GetControlValue trap). Value grammar for 'values': bare number = "
+            "double scalar, bare comma-list = double[]; typed prefixes: "
+            "dbl: sgl: i8: i16: i32: i64: u8: u16: u32: u64: s:<text> b:true "
+            "a:1,2,3 ai: as:a,b ab:true,false a2:[[1,2],[3,4]] ai2: au8: ... "
+            "cluster: c:(1,s:hi,b:true,ai:[1,2]) (nested c:() ok; array "
+            "elements inside clusters need []). 'outctl' (cycle only) reads a "
+            "different control after the run, e.g. cycle NumIn '5' NumOut. "
+            "Wrong-type sets are SILENTLY IGNORED by LabVIEW - always check "
+            "the ECHO line after set/cycle. Numeric variants coerce into any "
+            "numeric representation (verified i8..u64, sgl, dbl). Regression "
+            "targets: gen\\fpzoo.vi (typed zoo), Sort 1D Array.vim "
+            "(unsorted/sorted array), error.llb\\Clear Errors.vi ('error in "
+            "(no error)' mixed cluster). set/cycle WRITE control values - for "
+            "user-provided VIs run them on a copy first per the gateway "
+            "copy-first rule."),
         "inputSchema": {
             "type": "object",
             "properties": {
-                "mode": {"type": "string", "enum": ["get", "set", "setint", "run", "cycle"], "description": "cycle = set+run+read in one process (recommended)"},
+                "mode": {"type": "string", "enum": ["get", "set", "setint", "run", "cycle"], "description": "cycle = set+echo+run+poll-read in one process (recommended)"},
                 "vi_path": {"type": "string", "description": "Absolute path of the .vi file"},
-                "control": {"type": "string", "description": "Control/terminal label, e.g. 'InputArray'"},
-                "values": {"type": "string", "description": "Comma-separated values, e.g. '5,1,3' (required for set/setint/cycle)"}
+                "control": {"type": "string", "description": "Control/indicator label, e.g. 'InputArray'"},
+                "values": {"type": "string", "description": "Typed value grammar, e.g. 'dbl:3.14', 'i32:5', 's:text', 'b:true', '5,1,3' (double[]), 'c:(1,s:hi,b:true)' (required for set/setint/cycle)"},
+                "outctl": {"type": "string", "description": "cycle only: control to read after the run (default = control)"}
             },
             "required": ["mode", "vi_path", "control"]
         }

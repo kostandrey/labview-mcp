@@ -388,28 +388,52 @@ identical on 2 consecutive 500 ms polls (min 1.5 s, timeout 120 s).
 Never trust a read sooner than ~1 s after Run. `vi.Running` is not a
 supported property.
 
-### Runtime testing with ARRAY data (v3.9, verified 2026-10-16)
+### Runtime value I/O with arrread.exe (UNIVERSAL, revised 2026-10-20)
 
-`run_vi_get_value.vbs` is scalar-only. For array controls use
+`run_vi_get_value.vbs` is scalar-only. The universal FP value tool is
 `%SKILL%\scripts\arrread.exe` (source `arrread.cs` beside it; rebuild with
 the .NET 4.8 framework csc, C# 5 only - see header comment). It is a
 pure-IDispatch dynamic COM client: works where WSH cannot (WSH cannot
-index the `VT_ARRAY|VT_R8` that GetControlValue returns - `v(i)`, `Join`,
-`For Each` and JScript `VBArray` all fail; UBound works) and where
-PowerShell cannot (dead RCW). Modes:
+index the `VT_ARRAY|VT_R8` that GetControlValue returns) and where
+PowerShell cannot (dead RCW). It sets/reads ALL types - numerics of any
+representation (U8..U64, I8..I64, SGL, DBL), strings, booleans, 1D/2D
+arrays, clusters:
 
-    arrread get   <vi> <ctl>          print rank/len/elements
-    arrread set   <vi> <ctl> "9,1,5"  inject double[]  (setint = int[], coerced)
-    arrread run   <vi>                Run(true) + 3 s sleep
-    arrread cycle <vi> <ctl> "..."    set+run+read in ONE process - USE THIS
+    arrread get    <vi> <ctl>                     print value + actual variant type
+    arrread set    <vi> <ctl> <value>             typed grammar (below)
+    arrread setint <vi> <ctl> "9,1,5"             legacy alias for ai:
+    arrread run    <vi>                           Run(true) + 3 s sleep
+    arrread cycle  <vi> <ctl> <value> [outctl]    set+echo+run+poll-read ONE process
 
-Two rules the hard way:
+Typed value grammar (case-insensitive prefix): bare number = double
+scalar; bare comma-list = double[] (legacy); `dbl: sgl: i8: i16: i32:
+i64: u8: u16: u32: u64:` scalars; `s:<text>` string; `b:true|false`
+boolean; `a:1,2,3` double[]; `ai:` int[]; `as:a,b` string[];
+`ab:true,false` bool[]; `au8: ... au64:` / `ai8: ... ai64:` typed int
+arrays; `a2:[[1,2],[3,4]]` double[,]; `ai2:` int[,]; cluster
+`c:(1,s:hi,b:true,ai:[1,2])` (object[] of variants; nested c:() ok;
+array elements inside clusters need []).
 
-- **set/run/get in ONE process.** Split across processes it silently
-  fails whenever the target VI has no open front-panel window: on client
-  exit the VI leaves memory and the injected value is lost (next process
-  re-loads the file, empty FP). Symptom: "SET OK" then GetControlValue
-  returns len=0. A VI whose window is open in the user's IDE is immune.
+Rules the hard way:
+
+- **set/echo/run/get in ONE process (cycle).** Split across processes it
+  silently fails whenever the target VI has no open front-panel window
+  (documented GetControlValue behavior: the FIRST call on a VI whose FP
+  was never shown returns DEFAULT values - this is also the root cause
+  of the old "SET OK then len=0" trap). `cycle` now POLLS until the
+  output is stable (Run(true) is async) and takes an optional separate
+  outctl: `cycle <vi> NumIn 5 NumOut`.
+- **Wrong-type sets are SILENTLY IGNORED.** SetControlValue with a
+  variant that does not convert (e.g. Byte[3] into a cluster control)
+  leaves the value unchanged - no error. ALWAYS check the ECHO line
+  arrread prints after every set/cycle.
+- **Read-back type proves the target representation.** GetControlValue
+  returns the control's actual type: I32 control -> Int32, U8 -> Byte,
+  SGL -> Single. 1D numeric arrays come back typed (Double[]), string
+  arrays and 2D arrays come back as variant arrays (cluster[N] / rank=2
+  type=Object[]).
+- **Numeric variants coerce into ANY numeric representation** (verified
+  i8..i64, u8..u64, sgl, dbl - exact round-trips on typed controls).
 - **Zero broken wires proves nothing about runtime.** Always test with
   n>=3 distinct values (a 2-element test can pass by luck - cost a false
   "sorted" verdict), plus a duplicates case and a negatives case.
@@ -417,9 +441,11 @@ Two rules the hard way:
   to 0 - the classic symptom is output = max repeated n times
   (case study: recipe v3.9, sortArr_tmp.vi).
 
-SetControlValue accepts double[] and int[] variant arrays (int coerced
-to DBL); booleans/strings/clusters per NI docs (cluster = array of
-variants).
+Verified type matrix (recipe v3.27): gen\fpzoo.vi is the regression zoo
+(NumIn/StrIn/BoolIn pass-throughs + I8..U64/SGL/String controls from
+stock .ctls + DatumCtl cluster-with-array); Sort 1D Array.vim
+(unsorted/sorted array - functional cycle 5,1,3 -> 1,3,5);
+error.llb\Clear Errors.vi 'error in (no error)' for mixed clusters.
 
 The COM round-trip pattern was proven with NI's "Creating New VI From
 Scratch" example - see `references/labview-automation.md`. Working
