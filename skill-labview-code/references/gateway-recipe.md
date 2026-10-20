@@ -2171,6 +2171,59 @@ types; see SKILL.md 'Runtime value I/O'). Verified end-to-end:
 - gen\fpzoo.vi = regression zoo (pass-through scalars + typed controls
   + DatumCtl nested-array cluster); errors empty; committed.
 
+## v3.28 (2026-10-20) - While Loop stop terminal (st%d) + error-cluster scripting
+
+New gateway wire kind `st%d` (user-added; WhileLoop only): wires the
+conditional/Stop terminal. `arg2 = c|0|st1|0` - the trailing |0 is
+IGNORED; st%d = the loop's "Stop if True" setting (st1 = stop when TRUE,
+the common case; st0 = continue-if-true).
+
+Verified end-to-end on gen\while_st.vi (4 WhileLoops, errors EMPTY,
+ALL loops runtime-terminate; per-loop SR->LED termination proof):
+
+- **Inside vs outside source**: a source INSIDE the loop wires directly
+  to the st terminal (single wire, no tunnel); a source OUTSIDE creates
+  an auto-tunnel pair typed by the source (error-cluster tunnels display
+  as "error IO").
+- **st terminal accepts Boolean OR error cluster - but an error cluster
+  FORCES stop-on-error; the st%d setting is IGNORED**: a no-error
+  cluster wired via st0 NEVER stopped (ran until abort); a real error
+  via st1 stopped after iteration 1. Boolean cases behave per st%d.
+- **Runtime proofs**: st0+FALSE-const -> 1 iteration (CountOut=1);
+  st1+always-TRUE (Greater Or Equal To 0?, any:1114, i>=0) -> 1
+  iteration (W2Count=True); st1+REAL error (code 42) -> stops
+  (W3Count=True); final run CountOut=1, W2/W3/W4=True.
+- **Scripted TRUE source**: setval CANNOT set boolean constants
+  ('Format not known') - place `Greater Or Equal To 0?` (any:1114) and
+  wire i|0 -> x; its output is always TRUE inside a loop. FALSE const =
+  any:2006. setval DOES set string constants with arg2 format 'str'
+  (verified: SrcC <- 'boom;str').
+- **Error clusters with scripting** (the research ask):
+  - 'Error Ring Constant' (any:2039) is NOT placeable via New VI Object
+    (ERROR 1061, top-level AND inside structures): the Error Ring is a
+    DIALOG-configured node (glang/Error_Ring_Constant.html: "Launches
+    the Select Error dialog box").
+  - Plain error-cluster CONTROL: place stock .ctl via `place any:0<path>`:
+    `resource\importtools\sharedlib\Custom Control\error in (no
+    error).ctl` and `...\error out.ctl` - placed, wired and set/read
+    via arrread c:(b,i32,s) (ErrIn on gen\fpzoo.vi).
+  - A REAL error for runtime tests: place subVI
+    `vi.lib\Utility\error.llb\Error Cluster From Error Code.vi`
+    (error code input = connector cell 9 (Required), error out = cell 0)
+    + I32 constant. This replaced the Bundle approach.
+  - Bundle (2049) element count follows placed HEIGHT (~8.7 px/element;
+    H=40 -> 5 elements) - a 5-element cluster cannot wire into the
+    3-element error sink; first input terminal is named 'cluster'.
+- **Abort/run-state gotchas**: aborting a HUNG run leaves wires/errors
+  verbs failing (1320 / 1073 Get Errors) until the VI is aborted again;
+  Abort on an IDLE VI raises 0x3E8 "not in a state compatible" - usable
+  as a "has it finished?" check. Tools: references\abort_vi.vbs (abort
+  any VI by path); one-process run+poll+read pattern in run_poll.vbs
+  (scratch) - same rule as arrread cycle: set/run/read in ONE process.
+- gen\while_st.vi = st-regression zoo: WL1 st0+F-const+SR->CountOut;
+  WL2 st1+GE(i>=0)+SR->W2Count; WL3 st1+ErrGen(42)+SR->W3Count;
+  WL4 st0+F-const+GE->sri->W4Count.
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class

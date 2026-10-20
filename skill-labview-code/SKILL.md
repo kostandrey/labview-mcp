@@ -210,6 +210,30 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   `gen\sr_golden.vi` (zero broken wires, run-verified Out1=10) - copy
   and adapt it for any SR code generation. Full recipe + gotchas
   (unwired-node breakage, control setval): gateway-recipe.md v3.13.
+- **While Loop stop terminal** (Gateway v3.28): `wire;<vi>;<src>|<WhileLoop>;<srcK>|<srcI>|st1|0`
+  wires the loop's conditional terminal; st%d = the "Stop if True"
+  setting (st1 = stop when TRUE - the common case; st0 = continue-if-
+  true); the trailing |0 is IGNORED. Source INSIDE the loop wires
+  directly (no tunnel); source OUTSIDE auto-creates a tunnel pair typed
+  by the source. The st terminal accepts Boolean OR error cluster -
+  BUT an error cluster FORCES stop-on-error (the st setting is ignored;
+  no-error cluster + st0 never stops - verified). Scripted TRUE source:
+  place `Greater Or Equal To 0?` (any:1114) and wire i|0 -> x (i>=0 is
+  always TRUE); FALSE constant = any:2006 (setval CANNOT set booleans).
+  Runtime proof pattern: SR per loop -> LED indicator, read all in ONE
+  process (references\abort_vi.vbs aborts hung runs; a hung-run Abort
+  leaves wires/errors verbs failing 1320/1073 until re-aborted). Full
+  story + gen\while_st.vi regression: recipe v3.28.
+- **Error clusters with scripting**: 'Error Ring Constant' (any:2039)
+  is NOT placeable via New VI Object (ERROR 1061) - the Error Ring is a
+  DIALOG-configured node (glang/Error_Ring_Constant.html). Plain error
+  cluster control: place stock .ctl `resource\importtools\sharedlib\
+  Custom Control\error in (no error).ctl` (or error out.ctl) via
+  `place any:0<path>` - settable/readable via arrread c:(b,i32,s).
+  A REAL error for runtime tests: place `vi.lib\Utility\error.llb\
+  Error Cluster From Error Code.vi` (error code input = cell 9,
+  error out = cell 0) + I32 constant. setval string constants: arg2
+  format 'str' (verified). Recipe v3.28.
 - **Diagnosing a broken VI** (recipe v3.14): `errors` verb (Gateway
   v3.14+) returns the IDE Error-List content for the VI ('Errors list
   = ...; Details = ...'; ';'-separated, index-aligned; EMPTY = VI
