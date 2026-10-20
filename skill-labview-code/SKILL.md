@@ -219,7 +219,9 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   BUT an error cluster FORCES stop-on-error (the st setting is ignored;
   no-error cluster + st0 never stops - verified). Scripted TRUE source:
   place `Greater Or Equal To 0?` (any:1114) and wire i|0 -> x (i>=0 is
-  always TRUE); FALSE constant = any:2006 (setval CANNOT set booleans).
+  always TRUE); FALSE constant = any:2006. Boolean constants are now
+  settable: `setval %BooleanConstant|X;1;bool` (v3.29, accepts 1/true;
+  runtime-verified).
   Runtime proof pattern: SR per loop -> LED indicator, read all in ONE
   process (references\abort_vi.vbs aborts hung runs; a hung-run Abort
   leaves wires/errors verbs failing 1320/1073 until re-aborted). Full

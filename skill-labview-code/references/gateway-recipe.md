@@ -2193,11 +2193,14 @@ ALL loops runtime-terminate; per-loop SR->LED termination proof):
   st1+always-TRUE (Greater Or Equal To 0?, any:1114, i>=0) -> 1
   iteration (W2Count=True); st1+REAL error (code 42) -> stops
   (W3Count=True); final run CountOut=1, W2/W3/W4=True.
-- **Scripted TRUE source**: setval CANNOT set boolean constants
-  ('Format not known') - place `Greater Or Equal To 0?` (any:1114) and
-  wire i|0 -> x; its output is always TRUE inside a loop. FALSE const =
-  any:2006. setval DOES set string constants with arg2 format 'str'
-  (verified: SrcC <- 'boom;str').
+- **Scripted TRUE source**: BEFORE v3.29 setval could not set boolean
+  constants - the workaround was `Greater Or Equal To 0?` (any:1114)
+  with i|0 -> x (always TRUE inside a loop). NOW: `setval
+  %BooleanConstant|X;1;bool` works (accepts 1 or true; FALSE const =
+  any:2006). RUNTIME-VERIFIED (v3.29): BoolT <- 1;bool, wired to st1 ->
+  loop stopped after 1 iteration (W2Count=True); a silent failure would
+  have hung the loop. setval DOES set string constants with arg2
+  format 'str' (verified: SrcC <- 'boom;str').
 - **Error clusters with scripting** (the research ask):
   - 'Error Ring Constant' (any:2039) is NOT placeable via New VI Object
     (ERROR 1061, top-level AND inside structures): the Error Ring is a
@@ -2223,6 +2226,15 @@ ALL loops runtime-terminate; per-loop SR->LED termination proof):
 - gen\while_st.vi = st-regression zoo: WL1 st0+F-const+SR->CountOut;
   WL2 st1+GE(i>=0)+SR->W2Count; WL3 st1+ErrGen(42)+SR->W3Count;
   WL4 st0+F-const+GE->sri->W4Count.
+
+## v3.29 (2026-10-20) - setval 'bool' format (boolean constants)
+
+`setval %BooleanConstant|X;1;bool` (or 'true;bool') sets BD boolean
+constants. Runtime-verified on while_st.vi: BoolT <- 1;bool wired to
+WL2's st1 terminal -> loop terminated after 1 iteration (W2Count=True;
+the old FALSE value would have hung it). Both '1' and 'true' accepted.
+The GE(i>=0) TRUE-source workaround is no longer needed for constants
+(but remains useful for auto-TRUE sources inside loops).
 
 ## Roadmap (v3.1+, after v3 works)
 
