@@ -2236,6 +2236,59 @@ the old FALSE value would have hung it). Both '1' and 'true' accepted.
 The GE(i>=0) TRUE-source workaround is no longer needed for constants
 (but remains useful for auto-TRUE sources inside loops).
 
+## v3.30 (2026-10-20) - `getval` verb + flattened-data converter (lv_flat.py)
+
+**getval reads the value of ANY element** (BD constant or FP control) as
+flattened data. `lv_gateway.vbs Gateway.vi getval "<vi>%<Class>|<Label>"`
+- the FULL item identifier (path + `%Class|Label`) goes in the vi_path slot;
+  a bare path gives ERROR 1055. The Gateway runs Variant To Flattened String
+  and returns in `result`:
+
+```text
+Data type array: 60,16464,3,12,... (I16 array as CSV; 2 descriptor bytes per I16, BIG-endian)
+Data string length: 21
+Data string hex='01FFFFFFFF0000000C557365722773206572726F72'
+```
+
+**HEX TRANSPORT IS MANDATORY**: the data string passed through COM BSTR
+mangles bytes >= 0x80 (verified: flattened -1 (FFFFFFFF) arrived as
+F5F5F5F5). Type array is safe (CSV text). Gateway v3.30 hex-encodes the
+data string in-LabVIEW - lossless. lv_getval_hex.vbs also accepts the old
+raw `Data string='<binary>'` reply but that path is NOT reliable for high
+bytes. CodeC I32 -1 round-trips ffffffff (was f5f5f5f5).
+
+**Converter: `mcp-labview/scripts/lv_flat.py`** (regression tests:
+test_lv_flat.py, all passing):
+- `type <csv>` - descriptor tree; `decode <csv> <hex>` - value;
+  `encode <csv> <expr>` - data hex; `reply <file>` - decode a getval reply
+  (raw gateway string OR lv_getval_hex output; '-' = stdin).
+- Formats (lvconcepts/Type_Descriptors.html + Flattened_Data.html): TD =
+  [size:u16][code:u16][info][pascal name]; array TD adds ndims u16 + dims
+  u32 + elem TD; cluster TD = elem TDs; each elem TD self-delimits via its
+  own size. Data: big-endian; bool 01/00; string = u32 len + bytes; array =
+  u32 dims + row-major elements; cluster = concatenated elements; enum =
+  index (decoded to item name). Encoded grammar: `c:(b:true,i32:-1,s:text)`,
+  `a:[1,2]`, `a:[[1,2],[3,4]]` (2D).
+- Verified live: error-constant cluster {status,code,source} (encode
+  round-trip == hand-computed hex), I32 -1, string, bool, U16 (BoolRepCtl),
+  SGL, cluster{U8 array,I32} (DatumCtl).
+
+**Resolver now searches BD AND FP (v3.30, BD first)**: `%Control|ErrIn`
+works for FP controls (Control is FP-only); getval on a control reads its
+VALUE. Verified on fpzoo.vi: ErrIn={status=False,code=0,source=""}.
+**Known gaps**: (1) `setval` on a `%Control|` target still fails ERROR
+1057 (its writer casts to a constant class - use arrread for FP writes);
+(2) `getNode ... terms` on an ArrayConstant fails 1057 - an array constant
+is a constant with no terminals; (3) PLACING AN ELEMENT INSIDE an array
+constant shell (any:2070) does NOT nest - place puts it beside the shell
+(shell stays 'undefined type'); nesting needs New VI Object with the shell
+ref wired to the owner input (gateway upgrade, not yet implemented).
+
+**MCP tool `getval`** (server.py v3.30): one call = lv_getval_hex.vbs +
+lv_flat decode; returns `name = value` + descriptor tree + bytes consumed.
+Run `python scripts/validate_tools.py server.py` after any server.py edit
+(14 tools, 0 invalid as of this section).
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class

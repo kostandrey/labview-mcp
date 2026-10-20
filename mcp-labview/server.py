@@ -13,6 +13,7 @@ Tools cover three capabilities:
                             in/out runtime verification), manage_processes
 """
 import html as html_mod
+import importlib.util
 import json
 import os
 import re
@@ -426,6 +427,49 @@ def tool_arrread(args):
     return run(cmd, timeout=180)
 
 
+def tool_getval(args):
+    """Read any BD/FP element value via Gateway getval + lv_flat decode.
+
+    vi_path is a full item identifier 'X.vi%Class|Label'. The gateway flattens
+    the element (Variant To Flattened String) and returns the type descriptor
+    as an I16 CSV plus the data string HEX-encoded (v3.30; lossless over COM -
+    the old raw-BSTR transport mangled bytes >= 0x80).
+    """
+    selector = args.get("vi_path") or ""
+    if not os.path.isfile(GATEWAY_VI):
+        return ("ERROR: Gateway.vi missing (%s) - getval needs the gateway" % GATEWAY_VI)
+    base = selector.split("%")[0]
+    if not os.path.isfile(base):
+        return "ERROR: vi_path not found: %s" % selector
+    if "%" not in selector:
+        return ("ERROR: vi_path must be '<abs .vi path>%<ResolverClass>|<Label>' "
+                "(full item identifier), e.g. 'C:cvx.vi%DigitalNumericConstant|N'")
+    out = run(["cscript", "//nologo", os.path.join(SCRIPTS, "lv_getval_hex.vbs"),
+               GATEWAY_VI, selector], timeout=240)
+    typ = dhex = None
+    for line in out.splitlines():
+        line = line.strip()
+        if line.startswith("TYPE="):
+            typ = line[5:].strip()
+        elif line.startswith("DATA_HEX="):
+            dhex = line[9:].strip().lower()
+    if not typ or not dhex:
+        return "getval failed: " + out.strip()
+    spec = importlib.util.spec_from_file_location(
+        "lv_flat", os.path.join(SCRIPTS, "lv_flat.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    try:
+        td, _ = mod.parse_td(mod.i16_bytes(typ), 0)
+        data = bytes.fromhex(dhex)
+        v, off = mod.dec_data(td, data, 0)
+    except Exception as e:
+        return ("decode failed (%s)\nTYPE=%s\nDATA_HEX=%s" % (e, typ, dhex))
+    return "%s = %s\n[%s]\n(%d of %d data bytes consumed)" % (
+        td.name or td.kind(), mod.fmt(v), td.tree().replace("\n", "; "),
+        off, len(data))
+
+
 def tool_manage_processes(args):
     action = args["action"]
     if action == "list":
@@ -781,6 +825,35 @@ TOOLS = [
         }
     },
     {
+        "name": "getval",
+        "description": (
+            "Read the value of ANY block-diagram element or FP control via the "
+            "Gateway 'getval' verb (v3.30): the element is flattened with "
+            "Variant To Flattened String and the reply (type descriptor I16 "
+            "array + data string HEX) is decoded to a human-readable value. "
+            "vi_path is a FULL ITEM IDENTIFIER: '<abs .vi path>%<ResolverClass>|<Label>' "
+            "- resolver classes: NumericConstant, StringConstant, "
+            "BooleanConstant, DigitalNumericConstant, ClusterConstant, "
+            "Constant (any), Control (FP controls; BD searched first). "
+            "Examples: 'C:x.vi%DigitalNumericConstant|N' (scalar), "
+            "'...%ClusterConstant|error constant' (cluster), "
+            "'...%Control|ErrIn' (error cluster control). Decodes all types: "
+            "U/I 8..64, SGL, DBL, EXT, complex, BOOL, enum (by item name), "
+            "string, path, 1D/2D arrays, clusters (named elements). Read-only "
+            "and lossless (hex transport; a raw-BSTR reply from an older "
+            "gateway is auto-converted but bytes >= 0x80 may be mangled - "
+            "update Gateway.vi for those). For FP controls of a SAVED vi the "
+            "arrread tool is usually simpler; getval reaches BD constants "
+            "and elements arrread cannot."),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "vi_path": {"type": "string", "description": "Full item identifier: '<abs .vi path>%<ResolverClass>|<Label>'"}
+            },
+            "required": ["vi_path"]
+        }
+    },
+    {
         "name": "search_knowledge",
         "description": (
             "Full-text search over the accumulated LabVIEW code-generation "
@@ -831,6 +904,7 @@ TOOLS_IMPL = {
     "gateway": tool_gateway,
     "gateway_batch": tool_gateway_batch,
     "arrread": tool_arrread,
+    "getval": tool_getval,
     "manage_processes": tool_manage_processes,
     "search_knowledge": tool_search_knowledge,
 }

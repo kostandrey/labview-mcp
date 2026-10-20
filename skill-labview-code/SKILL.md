@@ -325,6 +325,15 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   the SAME type. RAS 1-chunk (bounds 46,40): [0]=array,[1]=out,
   [2]=element,[3]=index. FN (any:2353): [0]=out,[1]=init,[2]=input.
   IndexArray: [0]=array,[1]=element(OUT),[2]=index.
+- `getval` (v3.30) - read ANY element's value: vi_path = FULL item
+  identifier `path.vi%Class|Label` (resolver searches BD and FP,
+  BD first: `ClusterConstant|error constant`, `Control|ErrIn` for FP
+  controls). Reply = type-descriptor I16 CSV + HEX data string (the old
+  raw-binary transport mangled bytes >= 0x80 via COM BSTR - hex is
+  mandatory). Decode with `scripts/lv_flat.py` (type/decode/encode/reply;
+  regression tests test_lv_flat.py) or the MCP `getval` tool (one call).
+  setval on `%Control|` targets NOT supported yet (ERROR 1057) - use
+  arrread for FP writes.
 - `setval` - set a constant/control value: vi_path =
   `path.vi%Class|Label` (Class = short name, NO spaces:
   `NumericConstant`; generic `Constant` also works - NOT the verbose
