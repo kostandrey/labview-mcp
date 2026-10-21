@@ -109,6 +109,13 @@ all tested 2026-10-19 - prefer these over raw verb sequences):**
   malformed tool (e.g. a stray comma making the description a tuple ->
   JSON array) makes strict clients like Zed drop ALL tools while the
   server itself handshakes fine (recipe v3.22). Exit 0=valid.
+- `lv_knowledge.py <query>` (or MCP `lv_reference` tool) - STRUCTURED
+  lookup of verified codegen facts from `scripts/lv_knowledge.json`:
+  primitive/structure terminal maps, subVI connector-pane cells, wire
+  kinds (c/n/i/st/s*), resolver classes, setval representation codes,
+  error-code meanings. USE BEFORE wiring from memory - e.g. 'feedback'
+  (FN map is random per instance!), 'histogram' (pane cells), 'DBL'
+  (rep code). Keep the JSON in sync with the prose docs.
 - `lv_loop_scaffold.vbs <gw> <vi> <loopLabel> <x,y[,W,H]> <NconstLabel> <Nvalue> [SRlabel [SRy [Nxy]]]`
   - one-shot loop skeleton: place ForLoop + N constant + setval + wire
     N (c|0|n|0) + optional addSR + set tunnels Regular. WARNING it

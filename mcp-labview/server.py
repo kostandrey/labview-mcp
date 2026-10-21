@@ -470,6 +470,32 @@ def tool_getval(args):
         off, len(data))
 
 
+def tool_lv_reference(args):
+    """Structured lookup over the verified codegen facts (lv_knowledge.json):
+    primitive/structure terminal maps, subVI connector panes, wire kinds,
+    resolver classes, setval representation codes, error-code meanings."""
+    spec = importlib.util.spec_from_file_location(
+        "lv_knowledge", os.path.join(SCRIPTS, "lv_knowledge.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    db = mod.load()
+    words = [w for w in (args.get("query") or "").split() if w]
+    results = mod.search(db, words)
+    if not results:
+        return ("no match for: %s (try fewer/shorter words, or the full-text "
+                "search_knowledge tool over the prose docs)" % (args.get("query") or ""))
+    lines = []
+    for title, blob, src, note in results[:15]:
+        lines.append(title)
+        if note:
+            lines.append("  note: %s" % note)
+        if src:
+            lines.append("  verified: %s" % src)
+    if len(results) > 15:
+        lines.append("(+%d more matches - refine the query)" % (len(results) - 15))
+    return "\n".join(lines)
+
+
 def tool_manage_processes(args):
     action = args["action"]
     if action == "list":
@@ -896,6 +922,28 @@ TOOLS = [
         }
     },
     {
+        "name": "lv_reference",
+        "description": (
+            "Structured lookup over VERIFIED LabVIEW code-generation facts "
+            "(terminal maps, connector-pane cell tables, wire kinds, resolver "
+            "classes, setval representation codes, gateway error-code "
+            "meanings, batch-script format). Use this BEFORE wiring or "
+            "placing: e.g. query 'feedback' for the Feedback Node terminal "
+            "map (random per instance!), 'histogram' or 'linear fit' for "
+            "subVI pane cells, 'select' for the s|2/t|3/f|1 rule, 'DBL' for "
+            "the setval arg3 code, '1055' for an error's cause. Returns "
+            "only facts recorded as gateway-verified, with the recipe "
+            "section that verified each. For full-text prose search use "
+            "search_knowledge instead."),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "space-separated words, ALL must match, e.g. 'feedback', 'add array elements', 'Histogram', 'DBL'"}
+            },
+            "required": ["query"]
+        }
+    },
+    {
         "name": "manage_processes",
         "description": (
             "List running LabVIEW processes (pid + executable path, which "
@@ -927,6 +975,7 @@ TOOLS_IMPL = {
     "gateway_batch": tool_gateway_batch,
     "arrread": tool_arrread,
     "getval": tool_getval,
+    "lv_reference": tool_lv_reference,
     "manage_processes": tool_manage_processes,
     "search_knowledge": tool_search_knowledge,
 }

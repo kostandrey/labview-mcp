@@ -48,7 +48,10 @@ material - do not treat them as junk, but do not treat them as the point.
    description makes strict clients like Zed drop ALL tools), and the
    user may need to restart the MCP server / Zed.
 3. Grep the knowledge base BEFORE empirically rediscovering anything
-   (terminal orders, style codes, gotchas are already recorded).
+   (terminal orders, style codes, gotchas are already recorded). Fast
+   path: `python mcp-labview/scripts/lv_knowledge.py <query>` or the
+   MCP `lv_reference` tool (structured terminal maps, pane tables,
+   wire kinds, rep codes); grep the prose docs for everything else.
 
 ## Hard rules learned so far (details in SKILL.md)
 

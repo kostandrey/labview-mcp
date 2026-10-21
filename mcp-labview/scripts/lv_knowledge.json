@@ -1,0 +1,72 @@
+{
+  "_comment": "Machine-readable distillation of gateway-recipe.md / subvi-placement.md / SKILL.md verified facts. Every entry carries 'src' = the recipe section that verified it. Terminal entries: idx = Terms[] index (primitives OUTPUT-FIRST) or wire-kind for loop/SR terminals. Update this file TOGETHER with the prose docs.",
+  "wire_kinds": {
+    "c|0": "control/constant/indicator own terminal (arg1 side = its label)",
+    "n|<i>": "index into a NODE's Terms[] (primitives output-first: [0]=out)",
+    "i|0": "loop COUNTER terminal (arg1's source label = the LOOP's label, e.g. wire 'Loop1|Add1' 'i|0|n|2')",
+    "st%d": "WhileLoop STOP terminal (st1 = stop-if-TRUE, the common case; st0 = continue-if-true; accepts boolean or error cluster; trailing |0 ignored)",
+    "slo<i>|0": "shift register left OUTSIDE (init) - SINK",
+    "sli<i>|0": "shift register left INSIDE (previous-iteration value) - SOURCE",
+    "sri<i>|0": "shift register right INSIDE (per-iteration) - INOUT sink",
+    "sro<i>|0": "shift register right OUTSIDE (final value) - SOURCE",
+    "f|1": "Select FALSE input",
+    "s|2": "Select selector input (bool/comparison output goes HERE, never to f|1)",
+    "t|3": "Select TRUE input (t and f MUST be the same type)"
+  },
+  "primitives": {
+    "1070": {"name": "Random Number (0-1)", "terms": {"0": "out 'number: 0 to 1'"}, "src": "v3.20 session table"},
+    "1111": {"name": "Less?", "terms": {"0": "out", "1": "y (in)", "2": "x (in)"}, "src": "v3.20 session table"},
+    "1114": {"name": "Greater Or Equal To 0?", "terms": {"0": "out (always TRUE for i>=0 - scripted TRUE source)"}, "src": "v3.28; x input index not recorded - check wires Name"},
+    "1167": {"name": "Boolean To (0,1)", "terms": {"0": "out", "1": "Boolean in"}, "src": "v3.20 session table"},
+    "1201": {"name": "Cosine", "terms": {"0": "out cos(x)", "1": "x (in)"}, "src": "v3.20 session table"},
+    "1209": {"name": "Natural Logarithm", "terms": {"0": "out ln(x)", "1": "x (in)"}, "src": "v3.20 session table"},
+    "1060": {"name": "Square Root", "terms": {"0": "out sqrt(x)", "1": "x (in)"}, "src": "v3.20 session table"},
+    "1809": {"name": "Array Size", "terms": {"0": "out size(s)", "1": "array (in)"}, "src": "v3.20 session table"},
+    "1903": {"name": "Add Array Elements", "terms": {"0": "out sum", "1": "numeric array (in)"}, "note": "NEEDS BOUNDS - place with H=40 gives 1 chunk", "src": "v3.20 session table"},
+    "2049": {"name": "Bundle", "terms": {}, "note": "growable: placed height ~= 8.7 px per element (H=66->8, H=40->5); getNode may list garbage terminals beyond real count; errors verb 'type of the sink is cluster of N elements' is ground truth; avoid resized Bundles", "src": "v3.20 + Bundle gotcha"},
+    "2005": {"name": "Numeric Constant (BD)", "terms": {}, "note": "placed instance is I32; change representation via setval arg3 (see representation_codes)", "src": "v3.10 + v3.31"},
+    "2006": {"name": "Boolean Constant (FALSE)", "terms": {}, "src": "v3.28"},
+    "21703": {"name": "Waveform Graph (modern, FP)", "terms": {}, "note": "FP object - place arg2 MUST be 'x,y,W,H' (e.g. 400,300)", "src": "v3.20"},
+    "2070": {"name": "Array Constant shell (BD)", "terms": {}, "note": "place elements INSIDE via resolver: place <vi>|BD%GObject|<shellLabel>", "src": "v3.31"},
+    "2071": {"name": "Cluster Constant shell (BD)", "terms": {}, "note": "place elements INSIDE via resolver: place <vi>|BD%GObject|<shellLabel>; verified clusterX={Num1} end-to-end", "src": "v3.31"},
+    "21607": {"name": "Cluster control (FP)", "terms": {}, "note": "elements via place <vi>|FP%GObject|<clusterLabel>; works inside loops too (shell via |BD%GObject|<loopLabel>)", "src": "v3.31"},
+    "21003": {"name": "Numeric Control (FP)", "terms": {}, "note": "FP object - needs W,H in arg2", "src": "v3.12"},
+    "21004": {"name": "Numeric Indicator (FP)", "terms": {}, "note": "FP object - needs W,H in arg2", "src": "v3.12"},
+    "2353": {"name": "Feedback Node", "terms": {"0": "out", "1": "init (in)", "2": "input (in)"}, "note": "MAP IS RANDOM PER INSTANCE (both creation paths seen) - wire, then read isSource flags in wires; delete the wire by the UID SHOWN IN WIRES and rewire if wrong", "src": "v3.7/v3.8 + v3.20"},
+    "23504": {"name": "Pi (special constant)", "terms": {}, "note": "places a REAL FixedConstant with value pi", "src": "v3.20"},
+    "23505": {"name": "Pi Multiplied By 2 (special constant)", "terms": {}, "note": "TRAP: silently places a plain value-0 Numeric Constant! For 2pi place 23504 and Multiply by 2", "src": "v3.20"}
+  },
+  "structures": {
+    "ForLoop": {"terms": {"0": "N (in, SINK - as a source it raises 1055); wire 'NConst|Loop' 'c|0|n|0'"}, "note": "counter = kind i|0, NOT in Terms[] (Terms[1] is NULL); border tunnels are auto-created Auto-Index - switch array crossings to Regular with loop;<vi>%ForLoop|L;tunnel:<idx>;0", "src": "v3.4/v3.8 (supersedes the old Terms[0]=i claim)"},
+    "WhileLoop": {"terms": {}, "note": "counter i|0; stop terminal st%d (st1 common); error cluster wires to st1 too", "src": "v3.28"},
+    "Select": {"terms": {"0": "out", "1": "f (false in)", "2": "s (selector in)", "3": "t (true in)"}, "note": "t and f MUST be same type; bool goes to s|2 NEVER f|1", "src": "v3.8 SELECT TYPE RULE"},
+    "Replace Array Subset (1-chunk, bounds 46,40)": {"terms": {"0": "array (in)", "1": "out", "2": "element/subarray (in)", "3": "index (in)"}, "src": "v3.8"},
+    "Index Array (plain)": {"terms": {"0": "array (in)", "1": "element (OUT)", "2": "index (in)"}, "src": "v3.8"}
+  },
+  "subvi_panes": {
+    "Histogram.vi": {"path": "vi.lib\\Analysis\\baseanly.llb", "cells": {"0": "error out (I32 error CODE, not a cluster)", "1": "X Values out", "2": "Histogram: h(x) out", "3": "Histogram Graph out", "10": "intervals in (scalar I32 bin count, NOT a cluster; default 10, bins span min..max)", "11": "X in"}, "src": "v3.16 + session 2026-10-19, run-verified on 1e6 samples"},
+    "Std Deviation and Variance.vi": {"path": "vi.lib\\Analysis\\baseanly.llb", "cells": {"0": "X in", "1": "Weighting in", "2": "mean out", "3": "std dev out", "4": "variance out"}, "note": "one call gives mean AND sigma; prefer over Mean.vi (pane probe empty)", "src": "2026-10-19"},
+    "Linear Fit.vi": {"path": "vi.lib\\Analysis\\6fits.llb (polymorphic parent)", "cells": {"0": "Y in (1D DBL)", "4": "Best Linear Fit out (1D DBL)", "5": "X in (1D DBL)", "6": "slope out", "7": "Weight in (optional, unwired=all 1)", "8": "intercept out", "9": "tolerance in (<=0 -> default 0.0001, LAR/Bisquare only)", "11": "method in (enum 0=LS default,1=LAR,2=Bisquare)", "12": "parameter bounds in (optional cluster)", "14": "residue out", "15": "error out (I32 code - wire to Error Cluster From Error Code)"}, "note": "cells 1,2,3,10,13 = not linked; (LS) instance lacks tolerance/method/bounds (its 9-13 empty); probe the PLACED node %Node|<label> - Terms[] is ground truth", "src": "v3.26 case study"}
+  },
+  "resolver_classes": {
+    "verified": ["NumericConstant", "DigitalNumericConstant", "StringConstant", "BooleanConstant", "ClusterConstant", "Constant (generic - ANY constant)", "Control (FP controls; BD searched first)", "ControlTerminal (gateway derives Control from it)", "GObject (any object - used as nesting target)", "ForLoop", "WhileLoop", "Node"],
+    "syntax": "<path.vi>[|BD|FP|Other]%<Class>|<Label>[<%Class|Label>...]; |BD default; wrong class = ERROR 1092 (Traverse Initialization Failed)",
+    "src": "v3.3 + v3.30/v3.31"
+  },
+  "representation_codes": {
+    "0": "EXT (Extended Precision)", "1": "DBL", "2": "SGL", "3": "I32 (Long)", "4": "I16 (Word)", "5": "I8 (Byte)", "6": "U32 (Unsigned Long)", "7": "U16 (Unsigned Word)", "8": "U8 (Unsigned Byte)", "9": "CEXT", "10": "CDB", "11": "CSG", "12": "I64 (Quad)", "13": "U64 (Unsigned Quad)", "14": "FXF (Fixed-Point)"
+  },
+  "error_codes": {
+    "1055": "To More Specific Class - resolver FOUND the object but a cast failed (wrong kind, or the verb's branch does not accept this class)",
+    "1092": "Traverse Initialization Failed - wrong resolver CLASS name",
+    "1093": "delete failed for that UID - use the UID from the wires verb output",
+    "1061": "New VI Object cannot place this (e.g. Error Ring Constant - dialog-configured node)",
+    "74": "Flattened String To Variant - type string / data mismatch in setval XML"
+  },
+  "batch_format": {
+    "line": "verb;vi_path;arg1;arg2;arg3  (! prefix = tolerate failure; # comment)",
+    "meta": "delete;<path> (2-field = FILE delete), copy;<src>;<dst>, echo;<text>, sleep;<ms>",
+    "trap": "a 6th field on place is silently ignored -> unlabeled object -> ERROR 1092 later",
+    "src": "v3.21/v3.12"
+  }
+}
