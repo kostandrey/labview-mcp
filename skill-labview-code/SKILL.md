@@ -205,7 +205,8 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   not this verb (since the runner fix, 3+ field lines go to the gateway).
 - FP objects (numind/numctl, any:21003/any:21004) place INSIDE structures
   via resolver (Gateway v3.12+); the terminal lands in the loop diagram
-  and wires like any c|0 terminal.
+  and wires like any c|0 terminal. arg2 still needs 'x,y,W,H' (W,H = FP
+  item size, e.g. 80,32) - without W,H the item is unreadable.
 - **Shift registers**: create first with `loop;<vi>%ForLoop|L1;addSR;<Y>;<Label>`,
   then wire s-kinds: `slo<i>` = left-outside INOUT (wire init INTO it),
   `sli<i>` = left-inside OUTPUT (previous-iteration value), `sri<i>` =
@@ -260,16 +261,19 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   (`numctl numind strctl strind numconst strconst add multiply`) OR
   **`any:<styleCode>` for anything else** (code table in `style_codes.json`
   byName/byCode; e.g. Feedback Node = `any:2353` - it is NOT placeable by
-  name). arg2 = `"x,y"` or `"x,y,W,H"`. **W,H is REQUIRED for growable
-  nodes** - array ops like Replace Array Subset 3910, Build Array 2041,
-  Index Array 2042: without bounds the node is chunk-starved and
-  CRASHES LabVIEW on click; RAS 1 chunk = 46x40, each extra chunk
-  ~+13px H) - **and for FRONT-PANEL OBJECTS (numctl/numind/strctl/
-  strind/any:21003/any:21004) W,H IS the front-panel item size and
-  MUST be non-zero** (e.g. 80x32): with 0 the item is created 0-size -
-  label only, no visible body on the FP, unreadable there (COM
-  GetControlValue still works, so the defect hides from run tests -
-  verified visually via extract FP PNG, recipe v3.15).
+  name). arg2 = `"x,y"` or `"x,y,W,H"`. **ALWAYS pass 4 numbers for ANY
+  front-panel object** (numctl/numind/strctl/strind, any:21003/21004/
+  21607/21703): W,H IS the front-panel item size; without it the item is
+  created 0-size - label only, no visible body, UNREADABLE for the user
+  (COM GetControlValue still works, so the defect hides from run tests -
+  verified visually via extract FP PNG, recipe v3.15). Standard sizes:
+  numeric control/indicator **80,32**; graph 400,300; all golden scripts
+  in gen\ (sr_golden, pi_golden*) carry W,H - copy them, and the batch
+  runner WARNS on an FP place without W,H. **W,H is also REQUIRED for
+  growable nodes** - array ops like Replace Array Subset 3910, Build
+  Array 2041, Index Array 2042: without bounds the node is chunk-starved
+  and CRASHES LabVIEW on click; RAS 1 chunk = 46x40, each extra chunk
+  ~+13px H.
   arg3 = label. vi_path may carry a resolver suffix
   `path.vi%Class|Label` (nested `%Class|Label%Class|Label`) to drop the
   object INSIDE that structure. Returns the new element's UID.

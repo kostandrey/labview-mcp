@@ -130,6 +130,22 @@ Do While Not ts.AtEndOfStream
     If UBound(parts) >= 3 Then arg2  = Trim(parts(3))
     If UBound(parts) >= 4 Then arg3  = Trim(parts(4))
 
+    ' Guard (2026-10-21): an FP object placed without W,H gets an unreadable
+    ' front-panel item. Warn - do not fail (the place may still be wanted).
+    If LCase(verb) = "place" Then
+      Dim reFP, reXY, fpSet
+      fpSet = LCase(arg1)
+      Set reFP = New RegExp
+      reFP.Pattern = "^(numind|numctl|strind|strctl|boolind|boolctl|any:2[01][0-9]{3})$"
+      Set reXY = New RegExp
+      reXY.Pattern = "^[0-9]+\s*,\s*[0-9]+$"
+      If reFP.Test(fpSet) And reXY.Test(arg2) Then
+        P "LINE " & lineNo & " [place]: WARNING - FP object '" & arg1 & _
+          "' placed with 'x,y' only; the front-panel item will be UNREADABLE." & _
+          " Use arg2 'x,y,W,H' (numeric ctl/ind standard 80,32; graph 400,300)."
+      End If
+    End If
+
     ok = False
     Select Case LCase(verb)
       Case "delete"

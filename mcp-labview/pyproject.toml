@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "labview-mcp"
-version = "1.5.0"
+version = "1.5.1"
 description = "MCP stdio server for self-driving LabVIEW code generation (gateway scripting, VI extraction, NI docs, knowledge base)"
 readme = "README.md"
 requires-python = ">=3.8"

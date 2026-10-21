@@ -1637,6 +1637,15 @@ Note: sr_golden's own Num1/Out1 are also 0-size (placed before this
 rule) - harmless for COM-driven testing, but re-place with W,H if a
 human must read them on the panel.
 
+**2026-10-21 addendum - THE RULE FOR AGENTS**: the running agent kept
+creating unreadable FP items because the golden scripts placed
+numind/numctl with 'x,y' only and were copied verbatim. Fixed at all
+levels: (1) all gen\ golden scripts (sr_golden, pi_golden*) now carry
+W,H on every FP place (numeric ctl/ind standard 80,32); (2) the batch
+runner (lv_gateway_batch.vbs) WARNS on any `place` of an FP object with
+2-number arg2; (3) SKILL.md/MCP place description state: ALWAYS pass
+'x,y,W,H' for ANY FP object - numerics 80,32, graph 400,300.
+
 ## v3.16 (2026-10-18) - Placing and wiring NI library subVIs (gateway `place`, subVI mode)
 
 Proven 2026-10-18 on `gen\GaussianRandom.vi` (Gaussian White Noise.vi from

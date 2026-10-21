@@ -1,7 +1,7 @@
 newvi;;C:\LabView skill\gen\sr_golden.vi
 place;C:\LabView skill\gen\sr_golden.vi;function:2002;80,100;L1
-place;C:\LabView skill\gen\sr_golden.vi;numctl;20,300;Num1
-place;C:\LabView skill\gen\sr_golden.vi;numind;20,400;Out1
+place;C:\LabView skill\gen\sr_golden.vi;numctl;20,300,80,32;Num1
+place;C:\LabView skill\gen\sr_golden.vi;numind;20,400,80,32;Out1
 place;C:\LabView skill\gen\sr_golden.vi;numconst;20,450;N5
 place;C:\LabView skill\gen\sr_golden.vi%ForLoop|L1;add;150,150;A1
 loop;C:\LabView skill\gen\sr_golden.vi%ForLoop|L1;addSR;120;SR1

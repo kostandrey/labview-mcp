@@ -15,7 +15,7 @@ place;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;add;420,185;ACC
 place;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;any:2353;480,120;FN1
 place;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;multiply;420,260;P
 place;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;any:1053;480,260;DIV
-place;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;numind;440,320;PI
+place;C:\LabView skill\gen\pi_golden3.vi%ForLoop|Loop1;numind;440,320,80,32;PI
 wire;C:\LabView skill\gen\pi_golden3.vi;NConst|Loop1;c|0|n|0
 wire;C:\LabView skill\gen\pi_golden3.vi;OneConst|LE1;c|0|n|1
 wire;C:\LabView skill\gen\pi_golden3.vi;ZeroConst|SEL1;c|0|n|1
