@@ -438,7 +438,7 @@ def tool_getval(args):
     selector = args.get("vi_path") or ""
     if not os.path.isfile(GATEWAY_VI):
         return ("ERROR: Gateway.vi missing (%s) - getval needs the gateway" % GATEWAY_VI)
-    base = selector.split("%")[0]
+    base = selector.split("%")[0].split("|")[0]   # strip resolver AND |BD/|FP target
     if not os.path.isfile(base):
         return "ERROR: vi_path not found: %s" % selector
     if "%" not in selector:
@@ -671,16 +671,26 @@ TOOLS = [
             "SR must exist before wiring s* terminals - see wire arg2). "
             "TRAP: border auto-tunnels are created "
             "Auto-Index - always 'tunnel:i;0' array crossings or arrays "
-            "scalarize element-wise), setval (vi_path='path.vi%Class|Label' "
-            "resolver to the "
-            "element - Class is a SHORT name without spaces, e.g. "
-            "'NumericConstant'; generic 'Constant' also works; the verbose "
-            "analyze ClassName like 'DigitalNumericConstant' does NOT - "
-            "wrong class gives ERROR 1092; arg1=value, arg2=type: "
-            "dec|frc|str. WARNING: a placed numeric constant (numconst/"
-            "any:2005) is I32 integer - 'frc' on it SILENTLY writes 0 and "
-            "'dec' truncates; setval integers only, build fractional math "
-            "from DBL node outputs instead), wire (vi_path="
+            "scalarize element-wise), setval (vi_path='path.vi[|BD|FP]%Class|Label' "
+            "resolver to the element - Class is a SHORT name without spaces, "
+            "e.g. 'NumericConstant', 'ClusterConstant'; generic 'Constant' "
+            "also works; the verbose analyze ClassName does NOT - wrong class "
+            "gives ERROR 1092; optional |BD (default) or |FP selects the "
+            "target hierarchy (v3.31 resolver searches BD first, then FP). "
+            "Works on BD constants AND FP controls. arg1=value, arg2=type: "
+            "dec|frc|str|bool|XML (XML = full getval reply: <Cluster> with "
+            "type-string I16 array + HEX data string; sets ANY type incl. "
+            "clusters - verified on BD cluster constants; FP Control + XML "
+            "currently ERROR 1055). arg3 = numeric representation code, "
+            "numerical targets only, empty = keep: 0 EXT, 1 DBL, 2 SGL, "
+            "3 I32, 4 I16, 5 I8, 6 U32, 7 U16, 8 U8, 9 CEXT, 10 CDB, "
+            "11 CSG, 12 I64, 13 U64, 14 FXF - changes rep AND value in one "
+            "call (v3.31, rep first then value; verified I32->DBL 3.5 and "
+            "DBL->I32 42 on CodeC). WARNING: a placed numeric constant "
+            "(numconst/any:2005) is I32 integer - 'frc' on it SILENTLY "
+            "writes 0 and 'dec' truncates; setval integers only or change "
+            "the representation via arg3 first, build fractional math from "
+            "DBL node outputs instead), wire (vi_path="
             "target VI, arg1='srcLabel|dstLabel', arg2='srcKind|srcIdx|"
             "dstKind|dstIdx' where kind c=control/constant terminal (c|0), "
             "n=Terms[] index of a node - ForLoop has ONLY n|0=N; kind i=loop "
@@ -828,23 +838,25 @@ TOOLS = [
         "name": "getval",
         "description": (
             "Read the value of ANY block-diagram element or FP control via the "
-            "Gateway 'getval' verb (v3.30): the element is flattened with "
-            "Variant To Flattened String and the reply (type descriptor I16 "
-            "array + data string HEX) is decoded to a human-readable value. "
-            "vi_path is a FULL ITEM IDENTIFIER: '<abs .vi path>%<ResolverClass>|<Label>' "
-            "- resolver classes: NumericConstant, StringConstant, "
-            "BooleanConstant, DigitalNumericConstant, ClusterConstant, "
-            "Constant (any), Control (FP controls; BD searched first). "
-            "Examples: 'C:x.vi%DigitalNumericConstant|N' (scalar), "
-            "'...%ClusterConstant|error constant' (cluster), "
-            "'...%Control|ErrIn' (error cluster control). Decodes all types: "
-            "U/I 8..64, SGL, DBL, EXT, complex, BOOL, enum (by item name), "
-            "string, path, 1D/2D arrays, clusters (named elements). Read-only "
-            "and lossless (hex transport; a raw-BSTR reply from an older "
-            "gateway is auto-converted but bytes >= 0x80 may be mangled - "
-            "update Gateway.vi for those). For FP controls of a SAVED vi the "
-            "arrread tool is usually simpler; getval reaches BD constants "
-            "and elements arrread cannot."),
+            "Gateway 'getval' verb (v3.31): the element is flattened with "
+            "Variant To Flattened String and the reply (XML: type descriptor "
+            "I16 array + data string HEX) is decoded to a human-readable value. "
+            "vi_path is a FULL ITEM IDENTIFIER with an optional target: "
+            "'<abs .vi path>[|BD|FP]%<ResolverClass>|<Label>' - BD is the "
+            "default, the resolver searches BD first then FP. Resolver "
+            "classes: NumericConstant, StringConstant, BooleanConstant, "
+            "DigitalNumericConstant, ClusterConstant, Constant (any), "
+            "Control (FP controls; also reachable via ControlTerminal). "
+            "Examples: 'C:x.vi|BD%DigitalNumericConstant|N' (scalar), "
+            "'...|BD%ClusterConstant|error constant' (cluster), "
+            "'...|FP%Control|ClusterY' (FP cluster control). Decodes all "
+            "types: U/I 8..64, SGL, DBL, EXT, complex, BOOL, enum (by item "
+            "name), string, path, 1D/2D arrays, clusters (named elements). "
+            "IMPORTANT: getval on an FP CONTROL returns its DEFAULT value, "
+            "not the current one - for live FP values use the arrread tool "
+            "(cycle mode); getval is for BD constants, defaults and "
+            "representation (pair it with setval arg3). Read-only and "
+            "lossless (hex transport)."),
         "inputSchema": {
             "type": "object",
             "properties": {

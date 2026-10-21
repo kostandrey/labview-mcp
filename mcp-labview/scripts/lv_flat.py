@@ -359,17 +359,27 @@ def main(argv):
     if cmd == 'reply':
         text = sys.stdin.read() if argv[2] == '-' else open(argv[2], encoding='latin1').read()
         typ = dhex = None
-        m = (re.search(r'Data type array:\s*([0-9,\-\s]+)', text)
-             or re.search(r'TYPE=([0-9,\-]+)', text))
-        if m:
-            typ = m.group(1).strip()
-        m = re.search(r"Data string hex='([0-9a-fA-F]+)'", text)
-        if m:
-            dhex = m.group(1).lower()
-        else:
-            m = re.search(r'DATA_HEX=([0-9a-fA-F]+)', text)
+        if '<Cluster>' in text:                              # v3.31 XML
+            m = re.search(r'<Array>.*?</Array>', text, re.S)
+            if m:
+                typ = ','.join(re.findall(r'<Val>(-?\d+)</Val>', m.group(0)))
+            m = re.search(r'<String>.*?</String>', text, re.S)
+            if m:
+                mm = re.search(r'<Val>([0-9a-fA-F]*)</Val>', m.group(0))
+                if mm:
+                    dhex = mm.group(1).lower()
+        else:                                                # text formats
+            m = (re.search(r'Data type array:\s*([0-9,\-\s]+)', text)
+                 or re.search(r'TYPE=([0-9,\-]+)', text))
+            if m:
+                typ = m.group(1).strip()
+            m = re.search(r"Data string hex='([0-9a-fA-F]+)'", text)
             if m:
                 dhex = m.group(1).lower()
+            else:
+                m = re.search(r'DATA_HEX=([0-9a-fA-F]+)', text)
+                if m:
+                    dhex = m.group(1).lower()
         if typ is None or dhex is None:
             print('ERROR: type/data not found in reply')
             return 2

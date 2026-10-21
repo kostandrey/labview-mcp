@@ -2289,6 +2289,56 @@ lv_flat decode; returns `name = value` + descriptor tree + bytes consumed.
 Run `python scripts/validate_tools.py server.py` after any server.py edit
 (14 tools, 0 invalid as of this section).
 
+## v3.31 (2026-10-21) - |BD/|FP resolver targets, XML getval, setval XML + representation
+
+**ReferenceResolver Target type**: vi_path is now
+`<path.vi>[|BD|FP|Other]%<Class>|<Label>`; `|BD` is the default when
+omitted. `%GObject|<label>` resolves the CONTAINER and is the key to
+NESTED placement (see below). Nested element setval works by direct label
+search too (`%DigitalNumericConstant|Num1` finds Num1 inside a cluster
+constant).
+
+**getval reply is now XML** (same content, new transport):
+`<Cluster><NumElts>2</NumElts><Array><Name>type string</Name>...<I16><Val>n</Val>...
+</Array><String><Val>HEXDATA</Val></String></Cluster>`. lv_getval_hex.vbs
+parses it with MSXML2 and still emits TYPE=/DATA_HEX= (old text formats
+remain as fallback); lv_flat.py reply accepts raw XML OR wrapper output;
+MCP getval tool updated. Note: getval on an FP CONTROL returns the
+control's DEFAULT value, not the current one - live FP values via arrread
+(cycle).
+
+**Cluster / nested-object creation (ALL VERIFIED, zero broken wires)**:
+- BD cluster constant: `place <vi>|BD;any:2071;20,20,100,100;clusterX`
+  then `place <vi>|BD%GObject|clusterX;any:2005;20,20,20,20;Num1` (the
+  element resolves by dropping INSIDE the shell bounds; place arg2 now
+  takes 'x,y,W,H'). setval/getval round-trip verified: XML set 43.0 DBL,
+  decode {Num1=43.0}.
+- FP cluster control: `place <vi>|FP;any:21607;...;ClusterY` then
+  `place <vi>|FP%GObject|ClusterY;any:21003;20,20,80,32;NumY`.
+- Cluster control INSIDE a loop: place any:21607 via
+  `|BD%GObject|WL1` (drops in the loop's diagram), then the element via
+  `|FP%GObject|ClusterZ`. Verified on a while_st copy (errors empty).
+
+**setval (v3.31, refactored - ALL VERIFIED unless noted)**: works on BD
+constants AND FP controls. arg2 formats: dec|frc|str|bool|XML. XML = a
+full getval reply; the data string is HEX-DECODED inside the gateway
+(fixed after two iterations: first the hex string was used as raw bytes -
+I32 became 0x30303030='0000'; then an intermediate build ERRORed 74 at
+Flattened String To Variant; final build round-trips CodeC I32 43 and
+clusterX {Num1=43.0}). arg3 = numeric representation code (numerical
+targets ONLY, empty = keep): 0 EXT, 1 DBL, 2 SGL, 3 I32, 4 I16, 5 I8,
+6 U32, 7 U16, 8 U8, 9 CEXT, 10 CDB, 11 CSG, 12 I64, 13 U64, 14 FXF.
+Representation is applied BEFORE the value - one call changes both
+(verified: CodeC I32 `3.5 frc 1` -> DBL 3.5; `42 dec 3` -> I32 42; FP
+NumY DBL->I32 via default TD). This RETIRES the old 'placed numconst is
+I32 forever' limitation.
+
+**Known issues**: setval XML on an FP Control -> ERROR 1055 (To More
+Specific Class) - XML set works on BD constants only so far; setval
+dec/frc/str on FP Control reports 'set: ok' but the effect is not yet
+verifiable (getval reads defaults; arrread cannot address cluster-nested
+elements).
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class

@@ -325,22 +325,34 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   the SAME type. RAS 1-chunk (bounds 46,40): [0]=array,[1]=out,
   [2]=element,[3]=index. FN (any:2353): [0]=out,[1]=init,[2]=input.
   IndexArray: [0]=array,[1]=element(OUT),[2]=index.
-- `getval` (v3.30) - read ANY element's value: vi_path = FULL item
-  identifier `path.vi%Class|Label` (resolver searches BD and FP,
-  BD first: `ClusterConstant|error constant`, `Control|ErrIn` for FP
-  controls). Reply = type-descriptor I16 CSV + HEX data string (the old
-  raw-binary transport mangled bytes >= 0x80 via COM BSTR - hex is
-  mandatory). Decode with `scripts/lv_flat.py` (type/decode/encode/reply;
-  regression tests test_lv_flat.py) or the MCP `getval` tool (one call).
-  setval on `%Control|` targets NOT supported yet (ERROR 1057) - use
-  arrread for FP writes.
-- `setval` - set a constant/control value: vi_path =
-  `path.vi%Class|Label` (Class = short name, NO spaces:
+- `getval` (v3.31) - read ANY element's value: vi_path = FULL item
+  identifier `path.vi[|BD|FP]%Class|Label` (optional target, BD default;
+  resolver searches BD then FP: `ClusterConstant|error constant`,
+  `Control|ErrIn` for FP controls). Reply = XML with type-descriptor I16
+  array + HEX data string (older text/CSV forms still parsed). Decode
+  with `scripts/lv_flat.py` (type/decode/encode/reply; regression tests
+  test_lv_flat.py) or the MCP `getval` tool (one call). TRAP: getval on
+  an FP CONTROL returns the DEFAULT value - live FP values via arrread
+  cycle. setval XML on FP Control currently ERROR 1055 (BD constants
+  fine).
+- `setval` (v3.31) - set a constant OR control value: vi_path =
+  `path.vi[|BD|FP]%Class|Label` (Class = short name, NO spaces:
   `NumericConstant`; generic `Constant` also works - NOT the verbose
-  analyze ClassName; wrong class -> ERROR 1092), arg1 = value, arg2 =
-  `dec|frc|str`. **A placed numeric constant (`numconst`/`any:2005`) is
-  I32 integer** - `frc` on it silently writes 0, `dec` truncates; setval
-  integers only and build fractional math from DBL node outputs.
+  analyze ClassName; wrong class -> ERROR 1092). arg1 = value, arg2 =
+  `dec|frc|str|bool|XML` (XML = full getval reply, sets ANY type incl.
+  clusters; hex-decoded in-gateway). arg3 = numeric representation code
+  (numerical only, empty = keep): 0 EXT, 1 DBL, 2 SGL, 3 I32, 4 I16,
+  5 I8, 6 U32, 7 U16, 8 U8, 9-11 complex, 12 I64, 13 U64, 14 FXF - rep
+  is applied BEFORE the value, so one call changes both (retires the old
+  'placed numconst is I32 forever' limitation; frc-into-I32 still
+  rounds). Nested elements resolve by label directly
+  (`%DigitalNumericConstant|Num1` inside a cluster constant).
+- **Clusters/nested objects** (v3.31): BD cluster constant = place
+  `any:2071` shell, then place `any:2005` via
+  `<vi>|BD%GObject|<shellLabel>` (drops INSIDE); FP cluster control =
+  `any:21607` via `|FP` + `any:21003` via `|FP%GObject|<clusterLabel>`;
+  cluster control inside a loop = shell via `|BD%GObject|<loopLabel>`.
+  place arg2 now accepts `x,y,W,H`.
 - `wire` - arg1 = `srcLabel|dstLabel`, arg2 =
   `srcKind|srcIdx|dstKind|dstIdx`: kind `c|0` = control/constant terminal,
   `n|<i>` = index into a node's `Terms[]` (primitives: 0 = output,

@@ -62,40 +62,57 @@ If Err.Number <> 0 Then
   WScript.Quit 1
 End If
 
-' Split the reply (v3.30+): "Data type array: <csv> ... Data string length: N
-' Data string hex='<hex>'". Older gateways returned a raw binary
-' "Data string='<binary>'" - still supported as a fallback.
-Dim ti, di, hi, nl, lf, s, ch, typeCsv, dataStr, h, j
-ti = InStr(result, "Data type array: ")
-hi = InStr(result, "Data string hex='")
-di = InStr(result, "Data string='")
-If ti = 0 Or (hi = 0 And di = 0) Then
-  WScript.Echo "ERROR: unexpected reply format: " & Replace(result, vbCrLf, " | ")
-  WScript.Quit 1
-End If
-s = Mid(result, ti + 17)
-nl = InStr(s, vbCr)
-lf = InStr(s, vbLf)
-If nl > 0 And (nl < lf Or lf = 0) Then s = Left(s, nl - 1)
-If lf > 0 And (lf < nl Or nl = 0) Then s = Left(s, lf - 1)
-For j = 1 To Len(s)
-  ch = Mid(s, j, 1)
-  If (ch >= "0" And ch <= "9") Or ch = "-" Or ch = "," Then typeCsv = typeCsv & ch
-Next
-If hi > 0 Then
-  s = Mid(result, hi + 17)
-  h = ""
-  For j = 1 To Len(s)
-    ch = LCase(Mid(s, j, 1))
-    If (ch >= "0" And ch <= "9") Or (ch >= "a" And ch <= "f") Then h = h & ch Else Exit For
+' Split the reply (v3.31+): the gateway returns an XML cluster with the
+' type string I16 array and the HEX data string. Parse via MSXML and emit
+' TYPE=/DATA_HEX= for lv_flat.py. Older gateways returned text formats -
+' still supported as fallback.
+Dim ti, di, hi, nl, lf, s, ch, typeCsv, dataStr, h, j, xml, nodes, node
+Set xml = CreateObject("MSXML2.DOMDocument.6.0")
+If xml.LoadXML(result) And Not xml.documentElement Is Nothing Then
+  typeCsv = ""
+  Set nodes = xml.selectNodes("//Array[Name='type string']/I16/Val")
+  For j = 0 To nodes.length - 1
+    If j > 0 Then typeCsv = typeCsv & ","
+    typeCsv = typeCsv & nodes(j).Text
   Next
+  Set node = xml.selectSingleNode("//String/Val")
+  If node Is Nothing Then
+    WScript.Echo "ERROR: XML reply has no data string: " & Replace(result, vbCrLf, " | ")
+    WScript.Quit 1
+  End If
+  h = LCase(node.Text)
 Else
-  dataStr = Mid(result, di + 13)
-  If Right(dataStr, 1) = "'" Then dataStr = Left(dataStr, Len(dataStr) - 1)
-  h = ""
-  For j = 1 To Len(dataStr)
-    h = h & Right("0" & Hex(AscW(Mid(dataStr, j, 1)) And 255), 2)
+  ti = InStr(result, "Data type array: ")
+  hi = InStr(result, "Data string hex='")
+  di = InStr(result, "Data string='")
+  If ti = 0 Or (hi = 0 And di = 0) Then
+    WScript.Echo "ERROR: unexpected reply format: " & Replace(result, vbCrLf, " | ")
+    WScript.Quit 1
+  End If
+  s = Mid(result, ti + 17)
+  nl = InStr(s, vbCr)
+  lf = InStr(s, vbLf)
+  If nl > 0 And (nl < lf Or lf = 0) Then s = Left(s, nl - 1)
+  If lf > 0 And (lf < nl Or nl = 0) Then s = Left(s, lf - 1)
+  For j = 1 To Len(s)
+    ch = Mid(s, j, 1)
+    If (ch >= "0" And ch <= "9") Or ch = "-" Or ch = "," Then typeCsv = typeCsv & ch
   Next
+  If hi > 0 Then
+    s = Mid(result, hi + 17)
+    h = ""
+    For j = 1 To Len(s)
+      ch = LCase(Mid(s, j, 1))
+      If (ch >= "0" And ch <= "9") Or (ch >= "a" And ch <= "f") Then h = h & ch Else Exit For
+    Next
+  Else
+    dataStr = Mid(result, di + 13)
+    If Right(dataStr, 1) = "'" Then dataStr = Left(dataStr, Len(dataStr) - 1)
+    h = ""
+    For j = 1 To Len(dataStr)
+      h = h & Right("0" & Hex(AscW(Mid(dataStr, j, 1)) And 255), 2)
+    Next
+  End If
 End If
 WScript.Echo "TYPE=" & typeCsv
 WScript.Echo "DATA_HEX=" & h
