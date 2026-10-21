@@ -98,7 +98,7 @@ If srLabel <> "" Then
   r = CallGW("loop", loopPath, "addSR", srY, srLabel)
   WScript.Echo "[SR] " & r
   If Failed(r) Then WScript.Quit 1
-  WScript.Echo "WARNING: the SR is UNWIRED - an unwired RIGHT SR terminal BREAKS the VI. Wire sri0 (inside) immediately, or delete the whole SR via its UID above (deleting the RightShiftRegister removes the SR)."
+  WScript.Echo "WARNING: the SR is UNINITIALIZED - wire its left terminal (slo0|0) to an init constant, or it KEEPS ITS STATE BETWEEN RUNS in the same instance and later runs read stale values. Also: an unwired RIGHT SR terminal BREAKS the VI - wire sri0 (inside) immediately, or delete the whole SR via its UID above (deleting the RightShiftRegister removes the SR)."
 End If
 
 ' 6. set every border tunnel Regular (the N wire just created one)

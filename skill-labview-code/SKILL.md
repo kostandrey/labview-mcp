@@ -214,7 +214,13 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   right-outside OUTPUT (final value). The IDX FIELD after '|' selects
   WHICH SR (0-based addSR order); the digit after sli/slo is the
   multi-input-SR input number - always 0 for regular SRs (`sli1|0` ->
-  ERROR 1055). GOLDEN one-pass script: `gen\sr_golden.txt` ->
+  ERROR 1055). **UNINITIALIZED SR TRAP: until `slo<i>` is wired the SR has
+  no init value and KEEPS ITS STATE BETWEEN RUNS while the VI stays in the
+  instance** - run 2 reads run 1's final value (silently wrong results;
+  first run after loading the VI uses the default). Wire slo<i>|0 to an
+  init constant, or close/reload the VI between test runs. The batch
+  runner and lv_loop_scaffold print this warning on every addSR.
+  GOLDEN one-pass script: `gen\sr_golden.txt` ->
   `gen\sr_golden.vi` (zero broken wires, run-verified Out1=10) - copy
   and adapt it for any SR code generation. Full recipe + gotchas
   (unwired-node breakage, control setval): gateway-recipe.md v3.13.

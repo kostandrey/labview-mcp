@@ -68,6 +68,11 @@
     "nesting_trap": "a plain place (no resolver) at coordinates inside an existing structure's bounds lands the object INSIDE it silently (verified v3.32); analyze flat order does not disambiguate; reliable check = extract PNG",
     "src": "v3.32"
   },
+  "sr_uninitialized": {
+    "fact": "an SR with unwired slo (left terminal) keeps its value from the previous run while the VI stays in the instance - later runs read stale results",
+    "fix": "wire slo<i>|0 to an init constant, or reload the VI between test runs; batch runner and lv_loop_scaffold warn on addSR",
+    "src": "v3.32"
+  },
   "batch_format": {
     "line": "verb;vi_path;arg1;arg2;arg3  (! prefix = tolerate failure; # comment)",
     "meta": "delete;<path> (2-field = FILE delete), copy;<src>;<dst>, echo;<text>, sleep;<ms>",

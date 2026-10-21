@@ -200,6 +200,13 @@ Do While Not ts.AtEndOfStream
         ' ---- gateway verb: push all 5 controls (empty = cleared, prevents
         ' ---- leakage from the previous line), run, read result.
         Call CallGateway(lineNo, verb, viPath, arg1, arg2, arg3, ok)
+        ' Guard (2026-10-21): an SR created here is UNINITIALIZED until its
+        ' left terminal (slo<i>) is wired - an uninitialized SR keeps its
+        ' value from previous runs while the VI stays in the instance,
+        ' silently polluting later runtime tests.
+        If ok And LCase(verb) = "loop" And InStr(LCase(arg1), "addsr") = 1 Then
+          P "LINE " & lineNo & " [addSR]: WARNING - the shift register is UNINITIALIZED. Wire its left terminal (slo<i>|0) to an init constant, or it KEEPS ITS STATE BETWEEN RUNS in the same instance and later runs read stale values. Also: an unwired RIGHT terminal breaks the VI."
+        End If
     End Select
 
     If Not ok Then

@@ -2386,6 +2386,13 @@ created object's Owner (Class Name + label) and append it to the result,
 e.g. `owner=ForLoop "L1"` / `owner=TopLevelDiagram`. Then every driver and
 the batch runner can flag unintended nesting immediately.
 
+**Uninitialized SR keeps state between runs (2026-10-21)**: an SR whose
+left terminal (slo) is unwired has no init value - while the VI stays in
+the instance, each run starts from the PREVIOUS run's final value (first
+run after load uses the default). Runtime tests on such a VI are
+order-dependent; wire slo to an init constant or reload the VI between
+runs. The batch runner and lv_loop_scaffold now WARN on every addSR.
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class
