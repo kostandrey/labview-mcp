@@ -276,7 +276,12 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   ~+13px H.
   arg3 = label. vi_path may carry a resolver suffix
   `path.vi%Class|Label` (nested `%Class|Label%Class|Label`) to drop the
-  object INSIDE that structure. Returns the new element's UID.
+  object INSIDE that structure. **TRAP: a plain place (no resolver) at
+  coordinates that fall INSIDE an existing structure's bounds lands the
+  object INSIDE it silently** (verified v3.32: result string and analyze
+  order are identical to a top-level place) - keep top-level coordinates
+  outside all structures, nest intentionally via the resolver, and check
+  suspicious placements via extract PNG. Returns the new element's UID.
 - **`getNode` - terminal/connector-pane info (Gateway v3.17+)**: arg1 =
   `terms`. Two modes: (a) vi_path = `vi%Node|<label>` -> one line per
   terminal: `Term[i] UID: <n>, name='<...>', isSource: 0|1, isHidden:

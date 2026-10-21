@@ -2360,6 +2360,32 @@ process) is the only reliable set+run+read loop. (Persisting values
 would need a 'Make Current Values Default' gateway verb - not yet
 implemented.)
 
+## v3.32 (2026-10-21) - plain place inside structure bounds NESTS silently
+
+**Verified on placecheck.vi** (scratch): after `place <vi>;any:2002;40,40,400,300;L1`,
+a plain `place <vi>;numconst;100,100;C1` (coordinates inside the loop's
+bounds, NO resolver) lands **INSIDE the loop** - confirmed visually via
+extract PNG. A second constant at 600,600 stayed top-level. So plain-place
+nesting follows COORDINATES, not intent.
+
+- The place RESULT string is identical in both cases - no ownership hint.
+- `analyze`'s flat traversal does NOT disambiguate either: both constants
+  are listed after the loop's `Diagram []` line regardless of nesting.
+- Reliable check today: extract the VI and look at the diagram PNG.
+
+**Rules for agents**:
+- For TOP-LEVEL objects, choose coordinates outside every structure's
+  bounds (or place before creating structures on that area).
+- For INTENTIONAL nesting use the resolver target
+  (`<vi>|BD%GObject|<loopLabel>`), which is explicit and self-documenting.
+- After any plain place near structures, suspect nesting if wires to
+  border/outer terminals misbehave (extra auto-tunnels).
+
+**REQUESTED Gateway change** (root-cause fix): in the place case, read the
+created object's Owner (Class Name + label) and append it to the result,
+e.g. `owner=ForLoop "L1"` / `owner=TopLevelDiagram`. Then every driver and
+the batch runner can flag unintended nesting immediately.
+
 ## Roadmap (v3.1+, after v3 works)
 
 - `place` branch for **SubVI** (New VI Object `path` input + class
