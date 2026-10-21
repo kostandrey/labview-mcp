@@ -333,8 +333,9 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   with `scripts/lv_flat.py` (type/decode/encode/reply; regression tests
   test_lv_flat.py) or the MCP `getval` tool (one call). TRAP: getval on
   an FP CONTROL returns the DEFAULT value - live FP values via arrread
-  cycle. setval XML on FP Control currently ERROR 1055 (BD constants
-  fine).
+  cycle. FP-control values set by setval are RUNTIME-ONLY (not saved
+  with the VI; lost on close) - runtime tests = arrread cycle, live
+  co-editing = setval on the IDE-open VI.
 - `setval` (v3.31) - set a constant OR control value: vi_path =
   `path.vi[|BD|FP]%Class|Label` (Class = short name, NO spaces:
   `NumericConstant`; generic `Constant` also works - NOT the verbose

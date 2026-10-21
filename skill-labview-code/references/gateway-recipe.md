@@ -2333,11 +2333,19 @@ Representation is applied BEFORE the value - one call changes both
 NumY DBL->I32 via default TD). This RETIRES the old 'placed numconst is
 I32 forever' limitation.
 
-**Known issues**: setval XML on an FP Control -> ERROR 1055 (To More
-Specific Class) - XML set works on BD constants only so far; setval
-dec/frc/str on FP Control reports 'set: ok' but the effect is not yet
-verifiable (getval reads defaults; arrread cannot address cluster-nested
-elements).
+**Known issues / persistence model (v3.31 final state)**: setval XML on
+an FP Control WORKS ('set: ok', verified after an unsaved-gateway false
+alarm) - it sets the LIVE value of the open VI instance. **FP-control
+values are RUNTIME-ONLY, NOT saved with the VI**: visible in the live
+instance/IDE, lost when the VI is closed or opened in a separate
+instance. Read-back paths: getval on a Control returns the DEFAULT
+(verified in-session right after a successful set: {NumY=0.0}), and
+cross-process arrread get is stale (the known GetControlValue trap) - so
+the ONLY reliable set+run+read loop is the arrread 'cycle' mode (one
+process). Use setval on FP controls for live co-editing (the user sees
+the value in the open IDE VI); use arrread cycle for runtime tests.
+(Persisting values would need a 'Make Current Values Default' gateway
+verb - not yet implemented.)
 
 ## Roadmap (v3.1+, after v3 works)
 
