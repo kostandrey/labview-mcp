@@ -2338,14 +2338,18 @@ an FP Control WORKS ('set: ok', verified after an unsaved-gateway false
 alarm) - it sets the LIVE value of the open VI instance. **FP-control
 values are RUNTIME-ONLY, NOT saved with the VI**: visible in the live
 instance/IDE, lost when the VI is closed or opened in a separate
-instance. Read-back paths: getval on a Control returns the DEFAULT
-(verified in-session right after a successful set: {NumY=0.0}), and
-cross-process arrread get is stale (the known GetControlValue trap) - so
-the ONLY reliable set+run+read loop is the arrread 'cycle' mode (one
-process). Use setval on FP controls for live co-editing (the user sees
-the value in the open IDE VI); use arrread cycle for runtime tests.
-(Persisting values would need a 'Make Current Values Default' gateway
-verb - not yet implemented.)
+instance. Read-back depends on the target's OPEN STATE in the instance:
+getval on a Control returns the LIVE value if the VI is open in the
+instance (e.g. the user's IDE) and the DEFAULT if closed (gateway opens
+it fresh from disk). VERIFIED with clustest.vi open in the IDE: setval
+XML 7.5 -> getval 7.5, setval 2.25 -> getval 2.25, arrread get (separate
+process, same instance) 7.5; with the VI closed the same in-session
+getval returned 0.0. Cross-process arrread get on a CLOSED vi is also
+stale (the known GetControlValue trap). Workflow: IDE-open VI ->
+setval+getval round-trips work; closed VI -> arrread 'cycle' (one
+process) is the only reliable set+run+read loop. (Persisting values
+would need a 'Make Current Values Default' gateway verb - not yet
+implemented.)
 
 ## Roadmap (v3.1+, after v3 works)
 

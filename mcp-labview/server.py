@@ -859,11 +859,14 @@ TOOLS = [
             "'...|FP%Control|ClusterY' (FP cluster control). Decodes all "
             "types: U/I 8..64, SGL, DBL, EXT, complex, BOOL, enum (by item "
             "name), string, path, 1D/2D arrays, clusters (named elements). "
-            "IMPORTANT: getval on an FP CONTROL returns its DEFAULT value, "
-            "not the current one - for live FP values use the arrread tool "
-            "(cycle mode); getval is for BD constants, defaults and "
-            "representation (pair it with setval arg3). Read-only and "
-            "lossless (hex transport)."),
+            "FP-CONTROL VALUES ARE RUNTIME-ONLY (not saved with the VI). "
+            "getval on a control reads the LIVE value when the VI is open "
+            "in the LabVIEW instance (e.g. the user's IDE) and the DEFAULT "
+            "when it is closed (fresh open from disk) - verified both ways "
+            "(set 7.5/2.25 -> get 7.5/2.25 with the IDE-open VI; 0.0 when "
+            "closed). For closed VIs use the arrread tool's 'cycle' mode "
+            "(set+run+read in one process). Read-only and lossless (hex "
+            "transport)."),
         "inputSchema": {
             "type": "object",
             "properties": {

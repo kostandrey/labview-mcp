@@ -331,11 +331,11 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   `Control|ErrIn` for FP controls). Reply = XML with type-descriptor I16
   array + HEX data string (older text/CSV forms still parsed). Decode
   with `scripts/lv_flat.py` (type/decode/encode/reply; regression tests
-  test_lv_flat.py) or the MCP `getval` tool (one call). TRAP: getval on
-  an FP CONTROL returns the DEFAULT value - live FP values via arrread
-  cycle. FP-control values set by setval are RUNTIME-ONLY (not saved
-  with the VI; lost on close) - runtime tests = arrread cycle, live
-  co-editing = setval on the IDE-open VI.
+  test_lv_flat.py) or the MCP `getval` tool (one call). TRAP: FP-control
+  values are RUNTIME-ONLY (not saved with the VI, lost on close);
+  getval on a control reads the LIVE value if the VI is open in the
+  instance (IDE), the DEFAULT if closed - for closed VIs use arrread
+  cycle (set+run+read in one process).
 - `setval` (v3.31) - set a constant OR control value: vi_path =
   `path.vi[|BD|FP]%Class|Label` (Class = short name, NO spaces:
   `NumericConstant`; generic `Constant` also works - NOT the verbose
