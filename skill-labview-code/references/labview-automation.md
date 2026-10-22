@@ -275,3 +275,37 @@ instance - irrelevant, we worked on a copy).
    flagged to the user instead of assumed.
 6. Output: summary + element table + pseudocode with two `CASE` blocks
    (see the conversation record / SKILL.md Step 5 structure).
+
+## 10. Unpacking LLB members with LabVIEW COM (verified 2026-10-22)
+
+Task: extract all members of a closed LLB (e.g. Jake's
+`C:\Program Files\JKI\Jake\llb\jki-gaia.llb`) without the LLB Manager GUI.
+
+1. **Enumerate members** - the LLB stores member names as PLAIN ASCII in its
+   header (RSRC/LVARLB container). Regex-scan the raw bytes:
+   `[\x20-\x7E]{3,80}?(\.vi|\.ctl|\.llb|...)\b`. Do NOT trust generic
+   "strings" output: dependency names (vi.lib VIs) appear too - only names
+   that also occur in `<Item Name="...">` records are true members.
+2. **Extract each member as a standalone file** - `lv_extract2.vbs` cannot
+   open LLB members (its FileExists pre-check fails), but plain VI Server
+   COM can:
+   ```vbs
+   Set vi = app.GetVIReference("C:\...\x.llb\member.vi", "", False, &H20)
+   vi.SaveInstrument "C:\dest\member.vi", True, False  ' (viPath, saveACopy, withoutDiagram)
+   vi.ExportVIStrings "C:\dest\member_strings.txt"
+   On Error Resume Next: vi.CloseFrontPanel: vi.Revert  ' 0x47D trap guard
+   ```
+   `SaveInstrument(viPath, saveACopy:=True, withoutDiagram:=False)` writes a
+   copy OUT of the LLB without touching the original - works even for
+   password-locked VIs (verified on all 5 jki-gaia members, incl. a .ctl;
+   signature from `help\axprop\SaveInstrument.html`).
+3. **Locked-VI caveat**: for password-locked members `ExportVIStrings`
+   returns FRONT PANEL only (controls/DESC/tips) - no `<BD>` section, no
+   primitives. The block diagram is unrecoverable without the password
+   ( Jake's PPL: same conclusion as before). Unlocked VIs export the full
+   BD (see section 4).
+4. Validity check: extracted `.vi` starts with `RSRC\r\n\0\x03LVINLBVW`,
+   a `.ctl` with `LVCCLBVW`.
+5. Reusable script: `_service\tmp\jake_llb_unpack.vbs` (scratch copy) -
+   promote to `mcp-labview\scripts\` if a generic llb_unpack driver is
+   ever needed.

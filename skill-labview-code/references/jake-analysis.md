@@ -108,3 +108,26 @@ niceties, but it actually writes and runs VIs. Borrow-worthy: their
 introspection verbs, per-object images, and the pre-flight
 scripting-enabled check; ours to keep: the write-path verbs and the
 knowledge base.
+
+## Update 2026-10-22 (later): full LLB unpack - final verdict
+
+The 4 member VIs + 1 .ctl of `jki-gaia.llb` were fully extracted with
+LabVIEW COM (`GetVIReference` + `SaveInstrument saveACopy=True`; recipe in
+labview-automation.md section 10, artifacts in `_service\tmp\jake_unpacked\`).
+
+Result confirms the earlier assessment - **nothing new is reusable**:
+
+- `jake_constants_cluster.vi/.ctl`: a config cluster only - paths to the
+  helper launcher, helper ppl, app folder, app binary, service binary +
+  `arch suffix` string. No ports/URLs (the "20008" seen in strings is
+  `LVversion=20008000`, not a port).
+- `gaia_launcher.vi` / `gaia_launcher_core.vi` / `G AI Assistant.vi`:
+  QuickDrop plugin boilerplate (QD Launch VI Ref, error clusters). Their
+  block diagrams are PASSWORD-LOCKED - `ExportVIStrings` returns front
+  panel only, no `<BD>`/primitives. All real logic stays in the locked
+  compressed PPL.
+
+So the borrowable ideas remain the ones already listed above (per-object
+images, live property introspection, pre-flight scripting check, TCP
+listener); no Jake file is copied into the repo (proprietary, unusable
+standalone).
