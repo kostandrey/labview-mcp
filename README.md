@@ -23,6 +23,56 @@ on YouTube, playlist [**LabView MCP Server**](https://www.youtube.com/playlist?l
 5. [05 SumCalc](https://www.youtube.com/watch?v=yYM8KXf6l_M)
 6. [06 FixError](https://www.youtube.com/watch?v=IZdGrHqf40s)
 
+## How it works (inner architecture)
+
+```
+MCP client (Zed, Claude, ...)
+   |  JSON-RPC over stdio (zero dependencies, Python stdlib only)
+   v
+mcp-labview/server.py  - 15 tools (gateway, gateway_batch, arrread,
+   |                     extract_vi, getval, docs & knowledge lookups, ...)
+   |  cscript drivers -> COM: CreateObject("LabVIEW.Application")
+   v
+gateway/Gateway.vi  - runs INSIDE the LabVIEW IDE
+   |  VI Scripting primitives (New VI Object, Terms[], Connect Wire, ...)
+   v
+target .vi files - created, wired, set, analyzed and run
+```
+
+- **VI Scripting is the foundation.** The server accesses the LabVIEW IDE
+  through its VI Scripting functionality, which must be enabled in the
+  LabVIEW settings (*Tools > Options > VI Server > Enable VI Scripting*).
+  These scripting primitives only execute *inside* LabVIEW - external COM
+  cannot call them. That is exactly why the `Gateway.vi` helper exists:
+  it is a small VI running inside the IDE whose front panel is driven over
+  COM (`SetControlValue` -> `Run` -> read `result`).
+- **Gateway.vi is currently the main limiting factor.** It implements one
+  block-diagram case per verb (`place`, `wire`, `setval`, `getval`,
+  `analyze`, `wires`, `errors`, `delete`, `loop`, `connector`, ...). To
+  support a new tool/capability, a new case has to be created *there* -
+  this is where contributors with LabVIEW skills are most valuable.
+- **Drivers**: `lv_gateway.vbs` (single verb) and `lv_gateway_batch.vbs`
+  (scripts: `verb;vi_path;arg1;arg2;arg3` lines) attach to (or spawn) the
+  user's 64-bit LabVIEW instance, so edits appear live in IDE-open VIs.
+  Read verbs snapshot a temp copy of the target `.vi` first; write verbs
+  edit and save the real file (`Save:Instrument`).
+- **`arrread.exe`** (C#, dynamic IDispatch) handles typed front-panel
+  value I/O - any numeric representation, strings, booleans, 1D/2D
+  arrays, clusters. Its `cycle` mode does set + echo + run + poll-read in
+  ONE process (the only reliable pattern for live FP values).
+- **Element values travel as flattened data**: `getval`/`setval` use
+  *Variant To Flattened String* - a type-descriptor I16 array plus the
+  data bytes HEX-encoded in an XML reply, decoded by `lv_flat.py` (any
+  type: scalars, strings, paths, enums, arrays, clusters).
+- **Static analysis**: `extract_vi` runs `lv_extract2.vbs` (VI strings
+  export + HTML report + a PNG of the front panel, block diagram and
+  every case) on a temp copy - never the original.
+- **Documentation stack**: an offline mirror of the installed LabVIEW
+  CHM help (`search_docs`/`read_doc`), NI's web documentation via an
+  unofficial keyless backend (`search_ni_docs`/`fetch_ni_doc`, used
+  sparingly), and the verified knowledge base
+  (`search_knowledge`/`lv_reference` over `skill-labview-code/`).
+
 ## Layout
 
 | Path | Purpose |
