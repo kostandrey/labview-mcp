@@ -72,3 +72,39 @@ Command/verb names found (snake_case, its "tool" API):
 
 (Black-box analysis: the .llb is just the launcher; all logic lives in the
 compressed PPL. No decompilation of the block diagrams was done.)
+
+## Internet research (2026-10-22, public sources)
+
+- **jki.net/jake** (official): Jake = "Your LabVIEW AI Assistant"; three
+  pillars: Smart Assistant (Q&A), Error Detective, Resource Navigator
+  (find example VIs, VIPM packages). Free tier + Pro $30/mo + Team.
+  "Connect Jake to your LabVIEW IDE (desktop only)" confirms the
+  desktop-app-to-IDE link.
+- **Usage (kreiseder.org, 2024-11 beta + 2025-01 features)**: install via
+  nipkg (NI Package Manager); in the IDE open Quick Drop (Ctrl+Space) and
+  press **Ctrl+G** to open "Jake's LabVIEW Helper"; "launch jake" opens
+  the web chat **connected to your VI** ("What LabVIEW version am I using?",
+  "What do you see on the block diagram of my VI?"). Matches the
+  QuickDrop-plugin + service architecture found in the binaries.
+- **Release notes (support.jki.ai)**: 2024-11-07 beta through
+  2025-03-22 "LabVIEW Example VI Search"; notable:
+  Multi-VI Analysis (2024-12-12), Project Analysis (2024-12-20),
+  DAQ/FPGA/RT/VISA knowledge drops, "Enhanced LabVIEW Connectivity"
+  (2025-02-27, "status updates when Jake is using LabVIEW to analyze
+  code").
+- **User guide**: analysis/documentation/visualization focused (code
+  review, performance analysis, state-machine and class-hierarchy
+  diagrams via "Format Class Name for Mermaid"-style introspection) -
+  NO code-generation claims anywhere.
+- **NI forums (2025-04/09)**: "Jake cannot generate code"; NI's own
+  codegen AI is **NIGEL** (shipped later, roadmap
+  ni.com/en/shop/software-portfolio/software-roadmaps.html).
+
+**Positioning vs labview-mcp**: Jake = commercial, cloud-LLM, analysis /
+Q&A / review assistant with deep IDE introspection, but (at least through
+2025) NO code generation. Our project is the opposite bet: agent-driven
+CODE GENERATION and verification - rougher UX and fewer introspection
+niceties, but it actually writes and runs VIs. Borrow-worthy: their
+introspection verbs, per-object images, and the pre-flight
+scripting-enabled check; ours to keep: the write-path verbs and the
+knowledge base.
