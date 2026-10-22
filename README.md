@@ -1,5 +1,10 @@
 # LabVIEW MCP Workbench
 
+> **Status: early-stage proof of concept.** This is a working toy that
+> demonstrates the usage concept - it is far from fully functional or
+> polished. The API, verbs and behavior may change at any time.
+> **Community contributions are very welcome!**
+
 Self-driving LabVIEW code generation: an MCP server (`mcp-labview/`) plus a
 VI Scripting gateway (`gateway/Gateway.vi`) that let an AI agent create,
 wire, verify and run LabVIEW VIs over COM - with an accumulated, verified
