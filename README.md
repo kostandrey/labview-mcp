@@ -6,6 +6,18 @@ wire, verify and run LabVIEW VIs over COM - with an accumulated, verified
 knowledge base (`skill-labview-code/`) covering terminal maps, error
 causes, and proven build workflows.
 
+## Video tutorials
+
+Walkthroughs of the whole workflow (agent builds and debugs VIs live) are
+on YouTube, playlist [**LabView MCP Server**](https://www.youtube.com/playlist?list=PLYLVsMsTUfQQ):
+
+1. [01 Create vi and Pi calculation](https://www.youtube.com/watch?v=O2NeHFttuLk)
+2. [02 Adding code to the same vi](https://www.youtube.com/watch?v=AKD4gJnjtME)
+3. [03 RND with given PDF](https://www.youtube.com/watch?v=J5HpZgKXJW8)
+4. [04 Getting the vi pseudocode](https://www.youtube.com/watch?v=7wYE4Ucc8dg)
+5. [05 SumCalc](https://www.youtube.com/watch?v=yYM8KXf6l_M)
+6. [06 FixError](https://www.youtube.com/watch?v=IZdGrHqf40s)
+
 ## Layout
 
 | Path | Purpose |
