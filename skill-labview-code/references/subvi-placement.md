@@ -45,6 +45,7 @@ cscript //nologo mcp-labview\scripts\lv_extract2.vbs "<subvi>.vi" <outdir>
   a subVI until a human connects the pane (and it must be SAVED;
   getNode-on-temp-copy reads the disk state).
 
+
 ## Finding the right VI AND its documentation (Linear Fit case study, 2026-10-19)
 
 Worked example: "do a linear fit". Proven end-to-end; the same five
@@ -95,6 +96,29 @@ ni.com/docs/.../labview-api-ref and zone.ni.com/<help-version> pages
 are JavaScript shells - the `fetch` tool gets only navigation chrome,
 no content. The local CHM is the same content and always works
 offline.
+
+---
+## Rich IDE libraries: check before building by hand (2026-10-19)
+
+The LabVIEW IDE ships THOUSANDS of ready-made, tested VIs under
+`<LV>\vi.lib\**` (incl. `.llb` libraries). Before generating primitive-node
+code for any non-trivial computation (statistics, histogram, filters,
+array ops, signal generation, file I/O...), SEARCH for an existing VI
+first — one placed subVI call can replace 10-20 primitives:
+
+- find: `find "/c/Program Files/National Instruments/LabVIEW 2020/vi.lib" \
+  -iname "*.vi" -o -iname "*.llb" | grep -i <topic>`
+- place: `place;<vi>;any:0<full path to .vi or .llb\\member.vi>;<x,y>;<label>`
+  (paths with spaces work; the `0` is literal)
+- read the pane with `getNode;...;terms` (cell index == Terms[] index),
+  wire by CELL NUMBER, then `errors` must be empty before running.
+- Proven example: `Histogram.vi` (`vi.lib\Analysis\baseanly.llb`) —
+  wired in ONE batch, zero broken wires, run-verified on 1e6 samples
+  (Histogram_test session: h(x) summed to exactly N); see pane table
+  below. Same library: Std Deviation and Variance.vi.
+- Prefer `.llb` members that are already connector-wired; NEVER build a
+  histogram/statistics chain from Add/Divide/SR primitives when a
+  library VI exists.
 
 ## Verified connector panes (LV 2020)
 
