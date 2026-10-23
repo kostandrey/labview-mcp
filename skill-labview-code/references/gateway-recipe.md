@@ -2437,3 +2437,37 @@ for nodes living inside case #i.
 
 lv_knowledge.json `wire_kinds` updated (`cs|-1`, `cs|<i>`); SKILL.md wire
 kind list now mentions `cs`.
+
+## v3.34 (2026-10-23) - resolver token `Case#|<n>`: place INSIDE a case structure
+
+New resolver token (user-implemented in Gateway.vi). Resolver path gains a
+`%Case#|<n>` segment that targets case #n of a case structure:
+
+    place 'C:\...\CaseTest.vi%GObject|Case1%Case#|1' any:2005 30,30,20,20 SelT   -> True case
+    place 'C:\...\CaseTest.vi%GObject|Case1%Case#|0' any:2005 30,30,20,20 SelF   -> False case
+
+- Case numbering: **#0 = False, #1 = True** for a bool selector; for a
+  multi-case (numeric/enum/-string) structure #n = case by order.
+- **Works for PRIMITIVES too**, not only constants - verified
+  `any:1064` (Not) placed inside case #0 (UID correct, errors clean).
+- Verified end-to-end on a copy of `CaseTest.vi` (analyze: SelF under
+  Diagram 53 = case #0, SelT under Diagram 59 = case #1, Not0 under #0).
+
+**This also closed the open `cs|<i>` question (v3.33)**: the inner
+selector terminal (InnerTerminal, reported in wires as `[Tunnel] of
+Node{ UID:<border tunnel> }`) is a SOURCE. Correct wiring:
+
+    wire 'Case1|Not0' 'cs|0|n|1'      # selector value -> Not input, broken:0, errors EMPTY
+
+Wrong directions (both verified broken):
+- a source INTO `cs|<i>` (e.g. constant -> selector) = "connected to two
+  data sources" error;
+- wrong type (I32 const vs bool selector) = type-mismatch error
+  ("source is long, sink is boolean").
+
+Demo state: `CaseTest.vi` + `CaseTest_p.vi` now have BoolT -> selector,
+Not0 in the False case fed by `cs|0`. `CaseTest_t.vi` kept as the
+wire-only regression fixture.
+
+Roadmap progress: "placement inside structures" is now solved for CASE
+structures via `Case#|<n>` (loops/other structures still pending).

@@ -203,6 +203,12 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   'U:<uid>' or 'L:<label>'. `analyze`/`wires` print UIDs. NOTE: in batch
   scripts a 2-field `delete;<path>` line is the FILE-delete meta-command,
   not this verb (since the runner fix, 3+ field lines go to the gateway).
+- **Case structures** (Gateway v3.33/v3.34): wire the selector from
+  outside with `cs` - `wire 'BoolT\|Case1' 'c\|0\|cs\|-1'` (cs index -1 =
+  outer selector terminal). Place INTO a case via resolver
+  `%GObject\|<CaseLbl>%Case#\|<n>` (#0=False, #1=True for bool; by order
+  for multi-case) - works for constants AND primitives. The inner
+  selector terminal is a SOURCE: `wire 'Case1\|Not0' 'cs\|0\|n\|1'`.
 - FP objects (numind/numctl, any:21003/any:21004) place INSIDE structures
   via resolver (Gateway v3.12+); the terminal lands in the loop diagram
   and wires like any c|0 terminal. arg2 still needs 'x,y,W,H' (W,H = FP

@@ -13,7 +13,7 @@
     "s|2": "Select selector input (bool/comparison output goes HERE, never to f|1)",
     "t|3": "Select TRUE input (t and f MUST be the same type)",
     "cs|-1": "CaseStructure SELECTOR from OUTSIDE - wire any bool/numeric/enum source to it (src c|0|n|i -> cs|-1); clean only if the type matches all case labels",
-    "cs|<i>": "CaseStructure selector terminal INSIDE case #i - ONLY for nodes living inside that case's diagram; wiring an OUTSIDE source to cs|<i> auto-creates a SelectorTunnel and leaves TWO broken wires (verified)"
+    "cs|<i>": "CaseStructure selector terminal INSIDE case #i - it is a SOURCE: wire 'CaseLbl|<sinkInside>' 'cs|<i>|n|<idx>' (e.g. to a Not input). Wiring a source INTO cs|<i> = 'two data sources' error; wrong type = type-mismatch error (verified v3.34)"
   },
   "primitives": {
     "1070": {"name": "Random Number (0-1)", "terms": {"0": "out 'number: 0 to 1'"}, "src": "v3.20 session table"},
@@ -51,7 +51,7 @@
     "Linear Fit.vi": {"path": "vi.lib\\Analysis\\6fits.llb (polymorphic parent)", "cells": {"0": "Y in (1D DBL)", "4": "Best Linear Fit out (1D DBL)", "5": "X in (1D DBL)", "6": "slope out", "7": "Weight in (optional, unwired=all 1)", "8": "intercept out", "9": "tolerance in (<=0 -> default 0.0001, LAR/Bisquare only)", "11": "method in (enum 0=LS default,1=LAR,2=Bisquare)", "12": "parameter bounds in (optional cluster)", "14": "residue out", "15": "error out (I32 code - wire to Error Cluster From Error Code)"}, "note": "cells 1,2,3,10,13 = not linked; (LS) instance lacks tolerance/method/bounds (its 9-13 empty); probe the PLACED node %Node|<label> - Terms[] is ground truth", "src": "v3.26 case study"}
   },
   "resolver_classes": {
-    "verified": ["NumericConstant", "DigitalNumericConstant", "StringConstant", "BooleanConstant", "ClusterConstant", "Constant (generic - ANY constant)", "Control (FP controls; BD searched first)", "ControlTerminal (gateway derives Control from it)", "GObject (any object - used as nesting target)", "ForLoop", "WhileLoop", "Node"],
+    "verified": ["NumericConstant", "DigitalNumericConstant", "StringConstant", "BooleanConstant", "ClusterConstant", "Constant (generic - ANY constant)", "Control (FP controls; BD searched first)", "ControlTerminal (gateway derives Control from it)", "GObject (any object - used as nesting target)", "ForLoop", "WhileLoop", "Node", "Case#|<n> (case-structure CASE selector: '%GObject|<CaseLbl>%Case#|<n>' places the object inside case #n - #0=False, #1=True for a bool selector, #n by order for multi-case; works for constants AND primitives; src v3.34)"],
     "syntax": "<path.vi>[|BD|FP|Other]%<Class>|<Label>[<%Class|Label>...]; |BD default; wrong class = ERROR 1092 (Traverse Initialization Failed)",
     "src": "v3.3 + v3.30/v3.31"
   },
