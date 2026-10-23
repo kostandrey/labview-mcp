@@ -2402,3 +2402,38 @@ runs. The batch runner and lv_loop_scaffold now WARN on every addSR.
 - Connector-pane scripting (`Building connector panes` how-to) for subVI
   generation.
 - `delete` verb (GObject method / Delete method).
+
+## v3.33 (2026-10-23) - wire kind `cs`: Case structure SELECTOR terminal
+
+New terminal kind in the `wire` verb for CaseStructure selector wiring
+(user-implemented in Gateway.vi; verified empirically on
+`_service\tmp\CaseTest_t.vi`, a copy of the user's `CaseTest.vi`:
+Case1 + top-level BooleanConstant `BoolT`).
+
+**Usage** (arg1 = `srcLabel|CaseLabel`, arg2 = `srcKind|idx|cs|csIndex`):
+
+- `wire 'BoolT|Case1' 'c|0|cs|-1'` - **cs index -1 = the OUTER selector
+  terminal** (the structure's `?` border terminal). Verified: broken:0,
+  `errors` empty. The wire report shows the outer terminal as
+  `(UID:69) [Tunnel] of Node{ UID:65 }` (the selector terminal lives in
+  the structure's border-tunnel node).
+- `cs|<i>` (0..) - the selector terminal INSIDE case #i (each diagram of
+  the structure has its own InnerTerminal, e.g. UIDs 67/68 for two
+  cases). Only for sources INSIDE that case's diagram - placement of
+  nodes inside structures is still pending, so inside wiring is
+  UNTESTED until place-inside lands.
+
+**Trap (verified)**: wiring an OUTSIDE source (top-level constant) to
+`cs|0` returns `wire ok` but is ILLEGAL (both terminals isSource:1) and
+auto-creates a `SelectorTunnel` node plus TWO broken wires; worse, the
+new wire REROUTES through the selector tunnel to the outer terminal,
+REPLACING an existing good selector wire - deleting it then leaves
+"Unwired selector" error. Recovery: delete the broken wire(s)
+(`delete Wire U:<uid>`), re-run the `cs|-1` wire. The stray
+SelectorTunnel disappears with its wires.
+
+**Rule of thumb**: outside sources -> `cs|-1` only; `cs|<i>` exclusively
+for nodes living inside case #i.
+
+lv_knowledge.json `wire_kinds` updated (`cs|-1`, `cs|<i>`); SKILL.md wire
+kind list now mentions `cs`.

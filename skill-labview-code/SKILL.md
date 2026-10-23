@@ -112,7 +112,7 @@ all tested 2026-10-19 - prefer these over raw verb sequences):**
 - `lv_knowledge.py <query>` (or MCP `lv_reference` tool) - STRUCTURED
   lookup of verified codegen facts from `scripts/lv_knowledge.json`:
   primitive/structure terminal maps, subVI connector-pane cells, wire
-  kinds (c/n/i/st/s*), resolver classes, setval representation codes,
+  kinds (c/n/i/st/s*/cs), resolver classes, setval representation codes,
   error-code meanings. USE BEFORE wiring from memory - e.g. 'feedback'
   (FN map is random per instance!), 'histogram' (pane cells), 'DBL'
   (rep code). Keep the JSON in sync with the prose docs.

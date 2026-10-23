@@ -11,7 +11,9 @@
     "sro<i>|0": "shift register right OUTSIDE (final value) - SOURCE",
     "f|1": "Select FALSE input",
     "s|2": "Select selector input (bool/comparison output goes HERE, never to f|1)",
-    "t|3": "Select TRUE input (t and f MUST be the same type)"
+    "t|3": "Select TRUE input (t and f MUST be the same type)",
+    "cs|-1": "CaseStructure SELECTOR from OUTSIDE - wire any bool/numeric/enum source to it (src c|0|n|i -> cs|-1); clean only if the type matches all case labels",
+    "cs|<i>": "CaseStructure selector terminal INSIDE case #i - ONLY for nodes living inside that case's diagram; wiring an OUTSIDE source to cs|<i> auto-creates a SelectorTunnel and leaves TWO broken wires (verified)"
   },
   "primitives": {
     "1070": {"name": "Random Number (0-1)", "terms": {"0": "out 'number: 0 to 1'"}, "src": "v3.20 session table"},
