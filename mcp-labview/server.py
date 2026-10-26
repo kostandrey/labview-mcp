@@ -470,6 +470,55 @@ def tool_getval(args):
         off, len(data))
 
 
+def tool_lv_guidance(args):
+    """Static best-practice guidance: documentation access, patterns, guardrails."""
+    return (
+        "LABVIEW CODEGEN GUIDANCE (fixed text)\n"
+        "\n"
+        "1) DOCUMENTATION ACCESS\n"
+        "- Function/property semantics, terminal orders, design patterns: "
+        "search_docs -> read_doc (offline CHM mirror; no network, always "
+        "works). Key pages: glang/<Function>.html (terminal-order image), "
+        "lvhowto/creating_vis_from_templates.html and "
+        "lvconcepts/Examples_and_VI_Templates.html (patterns incl. state "
+        "machine), lvconcepts/Block_Diagram_Objects.html.\n"
+        "- ni.com pages are JS shells; use search_ni_docs + fetch_ni_doc "
+        "(docs-be backend) only as fallback.\n"
+        "- vi.lib/llb subVIs: extract_vi the POLYMORPHIC PARENT - its "
+        "_strings.txt names HELP_PATH/HELP_TAG -> find that page in the "
+        "mirror (verified on Linear Fit, 6fits.llb).\n"
+        "- Structured verified facts (terminal maps, pane cells, wire "
+        "kinds, rep codes): lv_reference. Prose knowledge base: "
+        "search_knowledge.\n"
+        "\n"
+        "2) PROGRAMMING PATTERNS\n"
+        "- State machine: enum state in a shift register + Case structure "
+        "on the enum (event-driven variant: Event structure + state "
+        "machine, see loc_bd_typicaleventstatemach.gif). Preferred for any "
+        "multi-step task.\n"
+        "- Producer/consumer: queues (Obtain Queue), producer loop "
+        "acquires, consumer processes; dequeue timeout for shutdown.\n"
+        "- Error handling: error in/out clusters through EVERY subVI; "
+        "merge errors at joins; fail fast on Error, warn continues.\n"
+        "- SubVIs: connector pane 4-2-2-4, controls left/top, indicators "
+        "right/bottom, no front-panel clutter; every control a terminal.\n"
+        "- Initialization: define defaults (Edit > Make Current Value "
+        "Default); an uninitialized shift register KEEPS state between "
+        "runs.\n"
+        "\n"
+        "3) CODEGEN GUARDRAILS (verified rules)\n"
+        "- Work on a COPY; apply to the original only after verification.\n"
+        "- 'wire ok' != connected: check wires (broken flags) + errors "
+        "verb (empty = clean) after every edit batch.\n"
+        "- Array wires crossing loop borders auto-create Auto-Index "
+        "tunnels - set them Regular (tunnel:i;0) or the wire stays broken.\n"
+        "- FP objects need x,y,W,H (W,H = FP item size); 0-size = unreadable.\n"
+        "- Growable nodes (Case/Stacked structures, Bundles) need W,H too.\n"
+        "- Before wiring from memory, query lv_reference (Feedback Node "
+        "terminal map is RANDOM per instance!).\n"
+    )
+
+
 def tool_lv_reference(args):
     """Structured lookup over the verified codegen facts (lv_knowledge.json):
     primitive/structure terminal maps, subVI connector panes, wire kinds,
@@ -578,7 +627,8 @@ TOOLS = [
             "documentation (function reference 'glang', properties 'lvprop', "
             "how-to 'lvhowto', concepts 'lvconcepts', scripting 'lvscript). "
             "Best first stop for 'what does function X do', terminal orders, "
-            "property semantics."),
+            "property semantics, design patterns and VI templates (e.g. "
+            "'creating_vis_from_templates', 'Examples_and_VI_Templates')."),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -949,6 +999,21 @@ TOOLS = [
         }
     },
     {
+        "name": "lv_guidance",
+        "description": (
+            "Static best-practice guidance for LabVIEW code generation: "
+            "documentation-access strategy (offline CHM mirror "
+            "search_docs/read_doc first; ni.com fallback; vi.lib subVIs via "
+            "extract_vi HELP_PATH), programming patterns (event-driven state "
+            "machine with enum + shift register; producer/consumer with "
+            "queues; error clusters wired through every subVI; connector "
+            "pane 4-2-2-4; initialize controls), and codegen guardrails "
+            "(verify wires/zero broken flags; errors verb; set auto-index "
+            "tunnels to Regular; work on copies). Returns a fixed text; no "
+            "inputs. Read once per session before generating code."),
+        "inputSchema": {"type": "object", "properties": {}}
+    },
+    {
         "name": "manage_processes",
         "description": (
             "List running LabVIEW processes (pid + executable path, which "
@@ -981,6 +1046,7 @@ TOOLS_IMPL = {
     "arrread": tool_arrread,
     "getval": tool_getval,
     "lv_reference": tool_lv_reference,
+    "lv_guidance": tool_lv_guidance,
     "manage_processes": tool_manage_processes,
     "search_knowledge": tool_search_knowledge,
 }

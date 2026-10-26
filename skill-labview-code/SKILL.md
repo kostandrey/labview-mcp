@@ -554,9 +554,12 @@ template.
 
 A zero-dependency MCP stdio server wrapping these same tools lives at
 `C:\LabView skill\mcp-labview\` (see its README for Zed/Claude Desktop
-config). It adds two capabilities this skill's scripts do not have:
+config). It adds three capabilities this skill's scripts do not have:
 `search_ni_docs` / `fetch_ni_doc` (programmatic ni.com documentation
-retrieval via NI's unofficial keyless `docs-be.ni.com` backend) and
+retrieval via NI's unofficial keyless `docs-be.ni.com` backend),
+`lv_guidance` (static best-practice text: documentation-access strategy,
+programming patterns incl. state machine/producer-consumer, codegen
+guardrails) and
 MCP-native tool schemas for everything else. Note: NI's Nigel AI agent is
 an MCP *client* (no public API for its knowledge) - this server can be
 registered into Nigel on LabVIEW 2025 Q3+ with a license.
