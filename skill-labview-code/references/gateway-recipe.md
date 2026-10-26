@@ -2581,6 +2581,12 @@ keeps working with the down-converted helpers.
 - A LabVIEW instance started for a conversion may die/exit between
   calls ("ClassFactory cannot supply requested class") - relaunch
   via ver_probe and retry the single conversion.
+- **LAUNCHING A LABVIEW VERSION RE-REGISTERS HKLM COM**: after the
+  2026 session, HKLM LocalServer32 for {9A872070-...} pointed to
+  LabVIEW 2026 - with the trial expiring, plain `CreateObject` would
+  have died completely. Restored with a direct HKLM write (the
+  shell has admin): `...\LabVIEW 2020\LabVIEW.exe /Automation`.
+  ALWAYS verify `verify_reg.ps1` output after mixing versions.
 - `GetVIReference` REJECTS forward-slash paths ("File not found") -
   always backslashes.
 - `shell.Run(cmd, 0, True)` hides the callee's stdout - conversions
