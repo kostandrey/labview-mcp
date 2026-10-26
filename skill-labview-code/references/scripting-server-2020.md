@@ -1,0 +1,143 @@
+# Scripting Server 2020 (Jan Goebel "labview_assistant" converted to LV2020)
+
+Location in this repo: `scripting-server-2020\` (the complete LV2020
+conversion of https://github.com/JanGoebel/labview_assistant, made
+2026-10-26 with `lv_batch_saveprev.vbs` "20.0", 242/242 files ok).
+Upstream source clone: `_service\tmp\labview_assistant` (2025-format,
+gitignored). **License: none upstream = all rights reserved.** Copied
+into this LOCAL repo on explicit user instruction 2026-10-26; do NOT
+push to any public remote. A `README.md` in the folder states this.
+
+## 1. Dependence clarification (the two projects are fully independent)
+
+| | `gateway\` (ours) | `scripting-server-2020\` (theirs) |
+|---|---|---|
+| Purpose | generic VI-scripting verb host (analyze/wires/place/wire/loop/...) | DQMH module = session server: keeps an open-VI registry (Data Cluster: References variant + Current ID) and exposes 28 MCP tools |
+| Runs | inside LabVIEW via COM (`SetControlValue`/`Run`), driven by our `server.py` | as a runnable app (`vi-scripting-server.vi`, HTTP MCP on port 36987) OR worker-by-worker via the same COM runner pattern |
+| SubVI deps | `Clear Errors`, `ReferenceResolver`, `GetTerminal`, `SelectByUID/Label`, `Error_to_string`, `Get Errors Method` + native vi.lib (`Traverse for GObjects` in `traverseref.llb`) | only its own lvlib members + native vi.lib |
+
+- **Gateway does NOT reference the Scripting Server** and vice versa
+  (verified: Gateway2020 subVI list vs Scripting Server lvlib members).
+- `gateway2020\` (untracked, morning-session duplicate) was the SAME
+  Gateway rev 183 converted again - both ping-verified; moved to
+  `_service\tmp\gateway2020_duplicate\`. Canonical home: `gateway\`
+  (has 2026 `Gateway.vi` + 2020 `Gateway2020.vi` + 2020-converted
+  subVIs, so one folder serves both LabVIEW versions).
+- The 2020 copy CONTAINS the Do Save VI fix (vi_id -> ID wire,
+  verified `wires` on the copy). The upstream 2025 source still has
+  the unfixed `Do Save VI`.
+
+## 2. Ways to use it
+
+1. **As the original MCP server**: open
+   `scripting-server-2020\VI Scripting Server.lvproj` in LabVIEW 2020,
+   run `vi-scripting-server.vi`; point an MCP client at
+   `http://127.0.0.1:36987/mcp/server` (see its readme.md). Not
+   integrated with our `server.py` (they are two parallel MCP
+   implementations).
+2. **Worker-by-worker via COM** (the pattern proven in
+   `labview-assistant-reuse.md` section 5): each `Do *.vi` worker has
+   front-panel controls `Do X Argument` + `Data Cluster in/out`;
+   `SetControlValue("<x> Argument", Array(...))` + `Run True` +
+   Sleep 12-15s + read back. **Limitation discovered 2026-10-26:**
+   workers RUN fine standalone (verified `Do Get Open VIs.vi`,
+   run 0x0, argument readable) but session-dependent outputs are
+   empty/meaningless outside the server context - the Data Cluster
+   (open-VI registry with live refnums) cannot be created through COM
+   variant arrays. Anything needing a vi_id/object_id chain requires
+   an in-LabVIEW runner VI (like `exp13_runner.vi`), not a script.
+
+## 3. Capability comparison vs our Gateway
+
+**Extra in the Scripting Server (no Gateway equivalent):**
+- `run_vi` (Run VI Argument {VI ID, open_frontpanel}) - run an open
+  session VI from the API
+- `rename_object` ({new_label_name, label_visible}) - Gateway has no
+  rename
+- `get_object_help` (live Context-Help string; we use the offline CHM)
+- `get-available-objects` (live full palette catalog; we use static
+  `style_codes.json`)
+- `get_vi_description`, `get_library`, `create_project`
+- live screenshots: `get_vi_blockdiagram`, `Get VI Frontpanel Picture`,
+  `get_structure_diagram` (per-subdiagram, via `BD.Get Image Scaled`)
+- `get_allowed_paths` / `Set Allowed Paths` + the `config.json`
+  Allowed Paths whitelist (guardrail idea for our server.py)
+- `create_control` {Object ID, Terminal Index, Constant} - auto-typed
+  control/constant from a terminal (Gateway: manual per-type wiring)
+- `cleanup_vi` (block-diagram cleanup)
+- persistent selection list (add_to/remove_from/clear) across calls
+- ID-based object handles (survives duplicate labels)
+
+**Extra in our Gateway (no server equivalent):** `wires` (broken
+flags/isSource/UIDs), `getNode` per-terminal maps, `errors` (IDE error
+list), `loop` verb (shift registers, tunnel index modes), setval XML +
+representation codes, `arrread` typed FP I/O on saved VIs (cycle mode),
+analyze class hierarchy. Addressing differs: Gateway resolves by
+`%Class|Label` (+ `Case#`), server by integer IDs.
+
+**Overlap, verified equivalent:** enclose (server: selection +
+`EncloseSelection2`; Gateway: `Case#` resolver), wire (Get Terminals +
+Connect Wire vs wire verb), delete, connect_to_pane (connector verb),
+loop terminals (get/show cond/iteration verbs).
+
+## 4. Argument clusters (module level; element order matters)
+
+Dumped 2026-10-26 from `lva_strings_all\*Argument--cluster.ctl.txt`
+(dump script `_service\tmp\dump_args.py`). Standard tail elements
+(`Wait Notifier` 0x70 + `wait for reply`) omitted below; every worker
+also has `Data Cluster in/out` + `error in/out` on its connector.
+
+| tool | inputs | outputs |
+|---|---|---|
+| open_vi | vi_path:String | vi_id |
+| new_vi | Open Frontpanel:Boolean | VI Reference:Numeric, Result:String |
+| save_vi | vi_id:Numeric, path:String | path_out:String |
+| run_vi | VI ID:Numeric, open_frontpanel:Boolean | - |
+| set_value | object_id:Numeric, value:String | - |
+| add_object | Object Name:String, position_x/y:Numeric | Object ID:Numeric, Result:String |
+| add_subvi | diagram_id:Numeric, subvi_path:String, position_x/y | subvi_id:Numeric |
+| connect_objects | from/to object reference + terminal index | - |
+| delete_object | object_id:Numeric | - |
+| rename_object | new_label_name:String, label_visible:Boolean | object_id:Numeric |
+| create_control | Object ID, Terminal Index, Constant:Boolean | Value:String |
+| add_to_selection | object_id:Numeric | Current Selection:Array, vi_id |
+| remove_from_selection | vi_id, object_id | current_selection:Array |
+| enclose_selection | vi_id:Numeric, structure_type:String | object_id:Numeric |
+| connect_to_pane | control_id, connector_pane_index | - |
+| get_object_terminals | object_id | terminals description:String |
+| get_vi_error_list | vi id | error list:String |
+| Get VI Blockdiagram / Frontpanel Picture | VI ID | (image) |
+| get_structure_diagram | structure_id, index | diagram_id:Numeric |
+| get_object_help | object_id | help_string:String |
+| get-available-objects | - | available objects:String |
+| get_vi_description | vi_id | Description:String |
+| Get Library | Library Path:String | Library Content:String |
+| get_allowed_paths | - | Allowed Paths:String |
+| get_loop_conditional/iteration_terminal | loop_id | conditional/iteration_terminal_id |
+| create_project | File Path:String | project_id:Numeric |
+
+**Verified flat runner arrays** (driving `Do *.vi` FP Argument controls
+directly via COM - see `exp13_run.vbs`):
+- `open_vi Argument` = `Array(abs_path, Empty, False)`
+- `save_vi Argument` = `Array(1, abs_path, Empty, False)` (explicit
+  path MANDATORY - wired-empty is a silent no-op)
+- `add_subvi Argument` = `Array(1, subvi_path, Empty, False, 200, 100)`
+- `add_to_selection Argument` = `Array(2, Empty, False, 1)`
+- `enclose_selection Argument` = `Array(1, "Case Structure", Empty, False)`
+
+## 5. Correction to labview-assistant-analysis.md
+
+The claim "EncloseSelection2 ... treat as 2024+ only" is WRONG. The
+full chain (Open -> Add Subvi -> Add to Selection -> Enclose ->
+Save) ran with ErrCode4=0 in a background 32-bit LV2020 and the SAVED
+target contains the enclosed structure (`EncloseSelection2` resolves
+in LV2020). See gateway-recipe v3.35/v3.36 and reuse section 6.
+
+## 6. Verification of the copy (2026-10-26)
+
+- `Do Open Vi.vi`, `Do Save VI.vi` analyze clean in 32-bit LV2020;
+  `Do Save VI.vi` errors EMPTY + fix wire present (UID 595).
+- `vi-scripting-server.vi` opens clean (no connector pane - GetControlValue
+  by name not applicable, expected).
+- Standalone `Do Get Open VIs.vi` run 0x0, argument readable, but
+  output empty outside server context (see section 2 limitation).

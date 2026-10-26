@@ -76,8 +76,13 @@ strings export / no local run. Analysis above is from binary zlib streams
   - highest value: agent self-check of generated code.
 - **auto-typed constant/control creation** from a terminal index.
 - **allowed-paths whitelist** in server.py/Gateway (guardrail).
-- `enclose_selection` - requires LV2025 `EncloseSelection2`; park until the
-  dev PC has LV2025+.
+- ~~`enclose_selection` - requires LV2025 `EncloseSelection2`; park until the
+  dev PC has LV2025+.~~ **CORRECTED 2026-10-26 evening: works in LV2020.**
+  The full chain (Open -> Add Subvi -> Add to Selection -> Enclose ->
+  Save) ran ErrCode1-5=0 in a background 32-bit LV2020 and the SAVED
+  target contains the enclosed structure. See gateway-recipe v3.35/v3.36,
+  reuse section 6, and `scripting-server-2020.md` (the LV2020 conversion
+  is now a tracked project folder with the Do Save VI fix included).
 - ID-based object handles: not needed for us (labels work and are
   LLM-friendlier), but the `Get VI By ID` pattern shows how to survive
   duplicate labels.
