@@ -11,7 +11,8 @@
 > "v3.15" + FP ITEM SIZE RULE; subVI placement (any:0<path>, cell
 > numbering) - "v3.16" (pane tables in references/subvi-placement.md);
 > getNode verb - "v3.17"; field notes (ForLoop-SR Terms, 1092/1093,
-> autowire trap, proven order) - "v3.18"; FN per-instance rule +
+> autowire trap, proven order) - "v3.18"; **Gateway2020 native-LV2020
+> repair + COM instance map + Do Save VI one-wire fix - "v3.36"**; FN per-instance rule +
 > special constants (Pi/2pi) + branching tunnels - "v3.20"; wires
 > terminal format `Label(UID) of Node{UID,Label}` - "v3.19". FN maps:
 > "FN terminal map" (v3.7 area). Golden builds: pi_golden3/4 (v3.11),
@@ -2471,3 +2472,141 @@ wire-only regression fixture.
 
 Roadmap progress: "placement inside structures" is now solved for CASE
 structures via `Case#|<n>` (loops/other structures still pending).
+
+## v3.35 (2026-10-26) - enclose chain WORKS end-to-end; Do Save VI broken (2020 runner pattern)
+
+**Context**: LV2020 trial period; testing labview_assistant workers natively
+in LV2020 via `lv_batch2020.vbs` + runners built with the gateway (exp13-17).
+Goal: place subVI -> select -> enclose -> SAVE on a target VI.
+
+### What WORKS (LV2020, runner pattern, state threaded through worker BD)
+
+`Do Open Vi -> Do Add Subvi -> Do Add To Selection -> Do Enclose Selection`
+all succeed (ErrCode taps = 0), the subVI IS placed on the real target and
+enclosed in a Case structure (verified via PrintVIToHTML **hierarchy**
+image, not the BD images - see staleness below). Run via 32-bit cscript
+COM: `SetControlValue` the arg clusters (Empty for the 0x70 notifier
+element), `Run True`, **Sleep 12-15s**, then read ErrCode indicators from
+the runner (top-level FP reads are trustworthy).
+
+### What FAILS: `Do Save VI` -> Save:Instrument = error 1026 (reproducible)
+
+With FULLY PRISTINE workers (re-converted from the clone):
+ErrCode1-4=0, ErrCode5=**1026** "VI Reference is invalid", LastID=3 (chain
+ran). Same in **LV2026** (64-bit COM) -> NOT version-specific. Disk target
+never modified.
+
+**Save:Instrument semantics measured (2020, errcodes from
+`resource/errors/English/LabVIEW-errors.txt` + `lvprop/VI_Sve_Instrument.html`):**
+- **1507** = "Cannot change the name or path of a VI in its current state"
+  (doc: returned when the VI is currently running).
+- **1026** = "VI Reference is invalid".
+- wired-**EMPTY** path input = **silent NO-OP** (0, no disk write).
+- **UNWIRED** path input = **1026** at runtime, CONTRARY to the doc claim
+  "The default is to the current location".
+- wired explicit path + copy=F -> 1507; copy=T -> 1026. Every combination
+  fails; ~10 variants tested (see exp13-17 scripts in `_service\tmp`).
+
+**Diagnostics used (reusable patterns):**
+- **ErrSrc tap**: `wire UB<n>|ErrSrc<n> n|3|c|0` (error source string) ->
+  names the exact failing node inside the worker (found "Invoke Node ...
+  Method Name: Save:Instrument", "Property Node in Do Add To Selection").
+- **LastID run-marker**: `wire <worker>|UB7 n|3|n|0; UB7|LastID n|2|c|0`
+  (Current ID from Data Cluster out) - distinguishes "subVI ran" (1/3)
+  from "all defaults" (0). ESSENTIAL: ErrCode=0 is ambiguous.
+- **RefBad probe**: `any:1128` NaN/Path/Refnum? -> `any:1167` Boolean To
+  (0,1) -> numeric indicator. CAVEAT: only proves non-NaN refnum VALUE,
+  not that the target is alive.
+- **UNRELIABLE**: reading a SUBVI's FP indicators via COM GetControlValue
+  after the run - can return DEFAULTS (RefBad2=0, PathSeen='' were both
+  ambiguous). Only top-level runner controls are trustworthy.
+- **PrintVIToHTML staleness**: BD/case images of freshly-scripted VIs may
+  render EMPTY subdiagrams; the **hierarchy** image (`...h.png`) is the
+  reliable witness.
+
+**Suspicion left for manual IDE review** (per user directive to stop and
+let the user check raw worker code): `Do Save VI.vi`'s Invoke node receives
+a ref that `NaN/Path/Refnum?` calls valid, yet Save:Instrument says
+invalid; check (a) the case-structure tunnel feeding the Invoke reference
+input (the 2026->2020 conversion may have damaged it - a FRESH tunnel
+changed the error 1026->1507), (b) the state variant's refnum surviving
+the worker chain, (c) whether `Save:Instrument` needs the VI ref "prepared"
+differently (e.g. options on Open VI Reference).
+
+**Workflow rules learned (2020-side editing):**
+- Wire-verb terminal indices for PLACED primitives must be verified with
+  `getNode ...%Node|<label>` terms BEFORE wiring - guessing input/output
+  index created output->output wires 3 times (each cost a repair cycle +
+  tunnel pollution).
+- `delete;vi;Wire;U:<uid>` then re-adding can leave orphaned tunnels;
+  UIDs RENUMBER after every save - re-run `wires` before ANY delete.
+- Editing tree workers: convert the pristine clone per file with
+  `lv_batch_saveprev.vbs <abs clone path> <abs out path> 20.0`
+  (RELATIVE paths fail with "File not found").
+- lv_batch2020.vbs + place + wires in ONE batch per edit round; verify
+  with errors verb after every round (zero broken wires + empty list).
+```
+
+## v3.36 (2026-10-26 evening) - Gateway2020 REPAIRED (runs natively in LV2020);
+### Do Save VI fixed (one wire) and the enclose+save chain VERIFIED end-to-end
+
+**Gateway2020.vi was "not executable" (0x3EB) in LV2020.** Root cause:
+its subVIs `ReferenceResolver / SelectByUID / SelectByLabel /
+Error_to_string / GetTerminal` were still 2026-format (saved 13:53 by
+the 2026 session) - 2020 cannot load them; the extract-tool icon list
+proved it (no `<name>i.png` rendered for exactly those nodes; Get
+Errors Method.vi + Get GObject Label.vi + native Clear Errors loaded
+fine). FIX: converted those five in place with lv_batch_saveprev
+(20.0), backups in `_service\tmp\gw2026_backup\` + `gw20conv\`.
+After that `lv_batch2020.vbs` + Gateway2020 answers `ping` in a fresh
+background 32-bit LV2020, and wires/getNode/wire/errors all work.
+Note: 2026 LabVIEW loads 2020-format subVIs fine, so Gateway.vi (2026)
+keeps working with the down-converted helpers.
+
+**COM instance control map (verified this evening):**
+- The version-independent `LabVIEW.Application` CLSID
+  {9A872070-...} is registered to **LabVIEW 2020** in HKLM (64-bit:
+  `C:\Program Files\...\LabVIEW 2020`, WOW6432Node: the x86 one).
+  LV2026 owns no ProgID after the 2020 install.
+- 32-bit cscript (`SysWOW64`) -> 32-bit LV2020 server; 64-bit
+  cscript (`System32`) -> 64-bit LV2020 server. Spawned instances
+  persist after the script exits - kill via manage_processes.
+- To make LV2026 the COM server WITHOUT admin: write the CLSID under
+  `HKCU\SOFTWARE\Classes\CLSID\{...}\LocalServer32` ->
+  `<2026 exe> /Automation` (HKCU overrides HKLM). BUT a RUNNING
+  LabVIEW that registered the class factory wins via the ROT - to
+  actually get 2026 you must first close the 2020 instance. Delete
+  the HKCU key afterwards; verify with `ver_probe.vbs` printing
+  26.3.1f1 (2026 trial was still valid 2026-10-26).
+- A LabVIEW instance started for a conversion may die/exit between
+  calls ("ClassFactory cannot supply requested class") - relaunch
+  via ver_probe and retry the single conversion.
+- `GetVIReference` REJECTS forward-slash paths ("File not found") -
+  always backslashes.
+- `shell.Run(cmd, 0, True)` hides the callee's stdout - conversions
+  that "fail silently" were only invisible; run cscript in the
+  foreground to see ok/FAIL lines.
+- The extract tool (and any 64-bit COM client) attaches to a RUNNING
+  2026 instance via ROT even after the HKCU override is deleted -
+  check `list_lv.ps1` before trusting `App.Version`.
+
+**Get VI By ID.vi BD node terminal map (2020 tree, via getNode terms):**
+`Get VI By ID.vi` node: Term[0]=error out, [2]=VI Reference,
+[3]=Data Cluster out, [8]=error in, [10]=**ID**, [11]=Data Cluster in.
+`Unbundle By Name` (save_vi Argument) node: Term[0]=input cluster,
+[1]=**vi_id**, [2]=path.
+
+**Do Save VI fix + verification (details in labview-assistant-reuse.md
+section 6):** wire `Unbundle By Name|Get VI By ID.vi n|1|n|10`
+(create wire UID 595, src isSource:1/dst 0, zero broken, errors
+empty). Full chain then: ErrCode1-5=0, LastID=3, disk mtime changed,
+saved target = 1 SubVI (while_st) + 2 case structures (enclose case
++ pre-existing Case1) per gateway analyze. The extract tool's
+hierarchy render may show EXTRA boxes ("5", "?!") - artifact; trust
+`analyze` counts. Wired-empty path = silent no-op still holds ->
+always pass an explicit path in save_vi Argument.
+
+**2020-native workflow now possible without LV2026**: 32-bit cscript
++ lv_batch2020.vbs + gateway\Gateway2020.vi = full read/write verb
+set on 2020-format VIs (no upconversion, no format flip). Use this
+as the DEFAULT for LV2020 exercise work from now on.

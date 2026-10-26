@@ -91,3 +91,82 @@ their module running), MCP-over-HTTP server (we have stdio), Tools/
 - Extracted reports/PNGs of 10 key workers: `_service\tmp\lva_extracted`
 - Scripts: `lva_strings_all.vbs`, `lva_extract_inplace.vbs`,
   `lv_batch_saveprev.vbs`, `lva_zlib_all.py` (all `_service\tmp`)
+
+## 5. Enclose-chain field test (2026-10-26, LV2020 runners) - RESULT
+
+Tested the crown-jewel chain natively in LV2020 with gateway-built runners
+(exp13-17, `_service\tmp`):
+
+- **OpenVI -> AddSubvi -> AddToSelection -> EncloseSelection: ALL WORK**
+  (ErrCode taps 0; subVI placed + enclosed on the real target - hierarchy
+  print proves it). The runner pattern: FP arg-cluster controls set via
+  COM (Empty for 0x70 notifier elements), Run True, Sleep 12-15s, read
+  ErrCode taps. Details: gateway-recipe v3.35.
+- **Do Save VI is BROKEN**: Save:Instrument -> 1026 "VI Reference is
+  invalid" (pristine wiring) or 1507 "Cannot change the name or path..."
+  (after any rewiring), reproducibly, in LV2020 AND LV2026. The disk
+  target is never written. ~10 input combinations tested
+  (path wired/empty/unwired x Save a Copy T/F). Wired-empty path =
+  silent no-op; UNWIRED path = 1026 despite docs claiming
+  "default = current location".
+- Stopped per the "works incorrectly -> user checks the code" rule.
+  Prime suspect: the tunnel/argument delivery into Do Save VI's Invoke
+  node; needs manual IDE review of `Do Save VI.vi` (and possibly
+  `Do Open Vi.vi`'s Open VI Reference options).
+
+## 6. Do Save VI ROOT CAUSE + FIX (2026-10-26 evening, autonomous)
+
+**Root cause (proven, present in the SOURCE library itself, NOT
+conversion damage):** `Do Save VI.vi` unbundles `save_vi Argument`
+into `vi_id` + `path` and wires ONLY `path` (-> String To Path).
+**`vi_id` is left UNWIRED**, so `Get VI By ID.vi`'s `ID` input
+defaults to 0. `Get VI By ID` looks up
+`Get Variant Attribute(References, Number To Decimal String(ID))`
+= attribute "0" - never exists (Add New Reference stores under the
+POST-increment Current ID: keys "1","2","3"...) -> empty variant ->
+coerces to **Not A Refnum 0x00** -> Save:Instrument -> **1026**.
+The user's probe confirmed: References map had '1'->FA90001C etc.,
+yet Get VI By ID output Not A Refnum.
+
+Red herrings (both measured, neither causal):
+- The case-structure tunnel into the Invoke is fine; the 1026->1507
+  change seen after a tunnel rewire was just a different failure of
+  the same null ref + wired path.
+- `Forbidden=True` probe: with an EMPTY Allowed Paths list
+  `Is Allowed Path` returns allowed=True, so the save case correctly
+  executes.
+
+**The fix is ONE WIRE:** `vi_id` (Unbundle By Name output) ->
+`Get VI By ID.vi` `ID` input. On the BD node: Unbundle By Name
+Term[1]='vi_id' -> Get VI By ID node Term[10]='ID'
+(wire verb: `Unbundle By Name|Get VI By ID.vi n|1|n|10`).
+
+Applied + verified autonomously (no user in the loop):
+- `lva_2020_tree\Scripting Server\Do Save VI.vi` edited via the
+  repaired 2020 Gateway (see gateway-recipe v3.36); backup:
+  `_service\tmp\DoSaveVI_backup_pre_fix.vi`.
+- Full chain rerun (exp13 runner, 32-bit background 2020):
+  ErrCode1-5 = **0**, LastID=3, **DISK target written** (mtime
+  changed), saved target contains 1x while_st.vi inside the enclose
+  case + the pre-existing Case1 (gateway analyze on the saved file).
+- Wired-EMPTY path to Save:Instrument is still a silent no-op ->
+  always pass an EXPLICIT path in save_vi Argument (the runner now
+  does; the runner script sets ArgSave=Array(1,<abs path>,Empty,False)).
+- **The 2026 SOURCE tree (`_service\tmp\labview_assistant`) still
+  has the bug.** If the tree is ever re-converted from source,
+  re-apply this wire (or fix the source first). Same applies to any
+  fresh lv_batch_saveprev conversion.
+
+Worker internals verified this round:
+- `Do Save VI`: save_vi Argument={vi_id,path,WaitNotifier,wait};
+  Invoke Save:Instrument(Path to saved file, Save a Copy, Without
+  Diagram); path element goes through String To Path; Is Allowed Path
+  gates the True case.
+- `Do Add To Selection`: Get VI By ID + Get GObject by ID ->
+  Property Diagram.SelList[] + Invoke Make Selection(Objects).
+- `Do Enclose Selection`: Get VI By ID -> Diagram; New VI Object
+  (Structure class specifier); Make Selection; EncloseSelection2
+  (EnclosureType = the created structure ref); **Struct.Delete** (the
+  temp structure); Add New Reference. NOTE: enclose leaves the target
+  in a state where ANY wired-path save returns 1507 (measured), so
+  save-after-enclose needs its own fix once Do Save VI works at all.

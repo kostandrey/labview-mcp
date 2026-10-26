@@ -13,6 +13,7 @@ Tools cover three capabilities:
                             in/out runtime verification), manage_processes
 """
 import html as html_mod
+import glob
 import importlib.util
 import json
 import os
@@ -352,6 +353,15 @@ def tool_gateway(args):
             if os.path.isfile(dst):
                 os.remove(dst)
             shutil.copyfile(base, dst)
+            # lvlib-member VIs break ("owning library is missing") without
+            # their .lvlib sibling - copy any from the source dir (idempotent)
+            for sib in glob.glob(os.path.join(os.path.dirname(base), "*.lvlib")):
+                sibdst = os.path.join(tmpdir, os.path.basename(sib))
+                if not os.path.isfile(sibdst):
+                    try:
+                        shutil.copyfile(sib, sibdst)
+                    except OSError:
+                        pass
             cmd.append(dst + (sep + resolver if sep else ""))
             # read verbs snapshot a temp copy for uniform behavior; this is
             # not a ban - the user's IDE-open VI works live too (getNode /
