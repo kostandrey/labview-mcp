@@ -309,3 +309,25 @@ Task: extract all members of a closed LLB (e.g. Jake's
 5. Reusable script: `_service\tmp\jake_llb_unpack.vbs` (scratch copy) -
    promote to `mcp-labview\scripts\` if a generic llb_unpack driver is
    ever needed.
+
+## 11. Version coexistence: batch Save-for-Previous (2026-10-26)
+
+Batch down-conversion of VI trees to an older LabVIEW version (e.g. for
+LV2025-saved third-party code, or two-hop conversions to LV2020):
+`_service\tmp\lv_batch_saveprev.vbs <file|dir> <outDir> <ver>` (keep
+local; copy to mcp-labview\scripts\ if it earns a permanent place):
+walks a tree, opens every .vi/.ctl/.vit and `VI.SaveForPrevious(path,
+warnings, ver)`, guarded close/revert per file, mirrors dirs, prints
+ok/FAIL per file. `Application.SaveVersions` lists valid targets
+(COM method list section 7). Verified: CaseTest_t.vi 2020 -> "19.0"
+produced a genuine LV2019 file (ok=1).
+
+**Version check - the reliable way**: strings export header
+`LVversion=20008000` = 20.0, `19008000` = 19.0 (decimal major+minor).
+Raw RSRC byte offsets are NOT reliable (multiple `?? 00 80 00` matches).
+
+**Version-to-version routing**: COM `CreateObject` attaches to the
+RUNNING instance - for a two-hop downconvert (e.g. 2026 -> 2020, if
+2026's SaveVersions no longer reaches 2020) run hop 1 with ONLY the new
+LabVIEW running, hop 2 with ONLY the older one. .llb inputs: unpack
+first (section 10), then convert the folder.
