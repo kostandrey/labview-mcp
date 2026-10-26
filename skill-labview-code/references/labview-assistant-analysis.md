@@ -81,3 +81,50 @@ strings export / no local run. Analysis above is from binary zlib streams
 - ID-based object handles: not needed for us (labels work and are
   LLM-friendlier), but the `Get VI By ID` pattern shows how to survive
   duplicate labels.
+
+## Update 2026-10-26 (post LV2026 verification): VERIFIED with the code open
+
+LV2026 Q3 (26.3.1f1) was installed temporarily and batch-downconverted the
+whole repo to LV2020 in ONE hop (`lv_batch_saveprev.vbs` "20.0":
+242/242 files ok, .vi AND .ctl; verified `LVversion=20008000` in strings
+exports; samples open clean in LV2020). Converted tree:
+`_service\tmp\lva_2020_tree` (local). So the "LV2025 wall" is gone.
+
+Verified by strings export + block-diagram PNGs
+(`_service\tmp\lva_extracted`, extracted IN PLACE from the converted
+tree - see gotcha below):
+
+1. **enclose_selection confirmed**: `Do Enclose Selection.vi` BD shows
+   `VI.Diagram -> TopLvlDiag` property chain, then
+   **`Diagram.Make Selection`** with input **Objects** (the object-ref
+   array), then **`Diagram.EncloseSelection2`** with input
+   **EnclosureType** (wired from a Structure class constant). On error
+   the created Struct is deleted. So the API is:
+   `Diagram.Make Selection(Objects[])` -> `Diagram.EncloseSelection2(EnclosureType)`.
+   NOT present in LV2020/2023 vi.lib, not in the LV2026 local CHM
+   (lvhelp.chm extracted+grepped), not findable on ni.com - a newer
+   scripting method (LV2024/2025+), semi-documented. The invoke node
+   NAME survives the downgrade to 2020, but the method can hardly
+   resolve there - treat as 2024+ only.
+2. **Wire Two Objects.vi**: `Get Terminals.vi` + `Connect Wire` with
+   `Wire Source`, `Auto Wire? (T)`, `Wiring Specs`, `Auto Route? (F)`
+   (as reconstructed from zlib strings; now confirmed by full export).
+3. **Screenshots**: `BD.Get Image Scaled` (Diagram class) +
+   `Draw Flattened Pixmap.vi` (confirmed).
+
+**Extraction gotcha (new)**: lv_extract2 places "<base> (copy).vi" in
+the OUT dir - for lvlib members the copy loses its .lvlib sibling and
+`GetVIReference` fails INTERMITTENTLY with 0x7 "File not found"
+(depends on whether the lvlib happens to be in memory). Fix: extract
+in place from the tree that contains the lvlib
+(`lva_extract_inplace.vbs`), or copy the lvlib alongside.
+
+**SaveVersions trap**: `Application.SaveVersions` is unreadable in WSH
+(Join = type mismatch) and PowerShell (returns empty) - do NOT rely on
+it; empirically `SaveForPrevious path, warnings, "20.0"` from LV2026
+works (one hop 2026->2020, better than the feared two-hop).
+
+**COM instance split after multi-version install**: 64-bit HKLM
+Classes now point to LV2026, WOW6432Node still to LV2020 - System32
+cscript (64-bit) spawns 2026, SysWOW64\cscript.exe spawns 2020. Route
+per task; only ONE running instance per bitness class is reused.

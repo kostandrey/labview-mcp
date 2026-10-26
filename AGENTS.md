@@ -55,6 +55,10 @@ material - do not treat them as junk, but do not treat them as the point.
 
 ## Hard rules learned so far (details in SKILL.md)
 
+- **Git: commit locally when there is a finished deliverable, but NEVER
+  push without an explicit user request** (rule set 2026-10-26). Local
+  research/scratch notes stay uncommitted or in `_service/` (gitignored).
+
 - Work on a COPY for development/testing/debugging; apply to the user's
   original VI only after the script is verified. (Working in the user's
   live LabVIEW instance via COM is standard and expected - edits appear

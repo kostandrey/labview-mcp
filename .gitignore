@@ -1,6 +1,9 @@
 # --- service / temporary files (extract results, scratch, run copies) ---
 /_service/
 
+# --- local-only side folder (see its README; do not commit) ---
+/_trial_study/
+
 # --- Python ---
 __pycache__/
 *.pyc

@@ -331,3 +331,17 @@ RUNNING instance - for a two-hop downconvert (e.g. 2026 -> 2020, if
 2026's SaveVersions no longer reaches 2020) run hop 1 with ONLY the new
 LabVIEW running, hop 2 with ONLY the older one. .llb inputs: unpack
 first (section 10), then convert the folder.
+
+**Addendum to section 11 (2026-10-26, verified on a temporary LV2026 Q3 install)**:
+- `SaveForPrevious path, warnings, "20.0"` from LV2026 reaches LV2020
+  directly - ONE hop suffices (242/242 labview_assistant files ok).
+- `Application.SaveVersions` is unreadable in WSH (Join: type mismatch)
+  and PowerShell (empty) - skip it, just try the target-version string.
+- Extracting lvlib-member VIs with lv_extract2 fails intermittently with
+  0x7 "File not found" when the "(copy).vi" lands in a dir WITHOUT the
+  .lvlib sibling - extract in place instead (open the tree file
+  directly, ExportVIStrings + PrintVIToHTML to the OUT dir).
+- After installing a new LabVIEW, 64-bit COM (System32 cscript, PS)
+  spawns the NEWEST version; SysWOW64\cscript.exe keeps answering with
+  the 32-bit-registered older one (currently 2020). Route per task;
+  a running instance is reused per bitness class.
