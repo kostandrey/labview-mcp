@@ -1,0 +1,7 @@
+{
+  "_comment": "Allowed-paths guardrail for gateway write verbs (place/wire/delete/loop/setval/connector/newvi), gateway_batch write lines + delete;/copy; meta-lines. Case-insensitive directory prefixes; %VAR% expanded; resolver suffixes ignored. Delete this file or empty the list to run unrestricted. Inspired by the Scripting Server config.json Allowed Paths whitelist.",
+  "allowed_paths": [
+    "C:\\LabView skill\\",
+    "%TEMP%\\lv_mcp\\"
+  ]
+}

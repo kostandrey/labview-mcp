@@ -39,8 +39,16 @@ HELP_DIR = os.path.join(SKILL_ROOT, "help")
 GATEWAY_VI = os.path.join(SKILL_ROOT, "gateway", "Gateway.vi")
 ARRREAD_EXE = os.path.join(SKILL_ROOT, "skill-labview-code",
                            "scripts", "arrread.exe")
+# Scripting Server 2020 (borrowed JanGoebel labview_assistant, see
+# skill-labview-code/references/scripting-server-2020.md)
+LVA_DIR = os.path.join(SKILL_ROOT, "scripting-server-2020")
+LVA_WORKERS = os.path.join(LVA_DIR, "Scripting Server")
+LVA_WORKER_VBS = os.path.join(SCRIPTS, "lva_worker.vbs")
+# Allowed-paths guardrail config (borrowed from the Scripting Server's
+# config.json Allowed Paths whitelist). Missing file = unrestricted.
+ALLOWED_PATHS_FILE = os.path.join(ROOT, "allowed_paths.json")
 SERVER_NAME = "labview-mcp"
-SERVER_VERSION = "1.2.1"
+SERVER_VERSION = "1.3.0"
 
 
 def log(msg):
@@ -321,6 +329,47 @@ def tool_fetch_ni_doc(args):
 WRITE_VERBS = ("newvi", "place", "wire", "delete", "loop", "setval", "connector")
 
 
+def _norm_path(p):
+    """Normalize to a case-insensitive dir prefix with trailing sep.
+    Strips a %Class|Label resolver suffix and expands %VAR%."""
+    p = os.path.expandvars(p).split("%", 1)[0]
+    n = os.path.normcase(os.path.abspath(os.path.expanduser(p)))
+    if not n.endswith(os.sep):
+        n += os.sep
+    return n
+
+
+def _load_allowed_paths():
+    """Whitelisted directory prefixes from allowed_paths.json (a bare list
+    or {"allowed_paths": [...]}). None = file missing/invalid = unrestricted
+    (previous behavior)."""
+    try:
+        with open(ALLOWED_PATHS_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    items = data.get("allowed_paths") if isinstance(data, dict) else data
+    if not isinstance(items, list):
+        return None
+    out = [_norm_path(p) for p in items if isinstance(p, str) and p.strip()]
+    return out or None
+
+
+def _path_allowed(p, allowed):
+    if allowed is None:
+        return True
+    n = _norm_path(p)
+    return any(n.startswith(a) for a in allowed)
+
+
+def _guard_fail(what, p, allowed):
+    return ("GUARDRAIL: %s %r is outside allowed_paths (%s). Edit "
+            "allowed_paths.json next to server.py, or copy the VI into an "
+            "allowed directory first (the gateway copy-first rule anyway "
+            "wants user-provided VIs developed on a copy)." %
+            (what, p, "; ".join(allowed)))
+
+
 def tool_gateway(args):
     verb = args["verb"]
     if not os.path.isfile(GATEWAY_VI):
@@ -328,6 +377,15 @@ def tool_gateway(args):
                 "C:\\LabView skill\\skill-labview-code\\references\\gateway-recipe.md "
                 "(~10 minutes), then retry. Meanwhile use extract_vi for static "
                 "VI analysis." % GATEWAY_VI)
+    allowed = _load_allowed_paths()
+    if allowed is not None and verb in WRITE_VERBS:
+        # newvi carries the save path in arg1 (vi_path stays empty); all other
+        # write verbs target vi_path (resolver suffix stripped by _norm_path).
+        target = (args.get("arg1") or "") if verb == "newvi" else (args.get("vi_path") or "")
+        if not target:
+            return "ERROR: verb %s requires a target path" % verb
+        if not _path_allowed(target, allowed):
+            return _guard_fail("%s target" % verb, target, allowed)
     cmd = ["cscript", "//nologo", os.path.join(SCRIPTS, "lv_gateway.vbs"), GATEWAY_VI, verb]
     if args.get("vi_path"):
         vi = args["vi_path"]
@@ -397,6 +455,42 @@ def tool_gateway_batch(args):
     script = args.get("script") or ""
     if not script.strip():
         return "ERROR: empty script"
+    allowed = _load_allowed_paths()
+    if allowed is not None:
+        # Scan every line the batch runner would act on: write-verb vi_path
+        # fields, newvi arg1 save paths, and the script-level 'delete;<path>'
+        # and 'copy;<src>;<dst>' meta-lines (real FILE operations).
+        violations = []
+        for ln in script.splitlines():
+            s = ln.strip()
+            if not s or s.startswith("#"):
+                continue
+            if s.startswith("!"):
+                s = s[1:]
+            low = s.lower()
+            if low.startswith("delete;"):
+                p = s.split(";", 1)[1].strip()
+                if p and not _path_allowed(p, allowed):
+                    violations.append(ln)
+                continue
+            if low.startswith("copy;"):
+                parts = s.split(";")
+                if len(parts) >= 3 and parts[2].strip() and \
+                        not _path_allowed(parts[2].strip(), allowed):
+                    violations.append(ln)
+                continue
+            parts = s.split(";")
+            if parts and parts[0].strip().lower() in WRITE_VERBS:
+                verb = parts[0].strip().lower()
+                idx = 2 if verb == "newvi" else 1  # newvi: arg1 = save path
+                if len(parts) > idx:
+                    target = parts[idx].strip()
+                    if target and not _path_allowed(target, allowed):
+                        violations.append(ln)
+        if violations:
+            return ("GUARDRAIL: script touches paths outside allowed_paths "
+                    "(%s) - refused:\n%s" % ("; ".join(allowed),
+                                             "\n".join(violations)))
     tmpdir = os.path.join(tempfile.gettempdir(), "lv_mcp")
     os.makedirs(tmpdir, exist_ok=True)
     script_path = os.path.join(tmpdir, "batch_script.txt")
@@ -478,6 +572,41 @@ def tool_getval(args):
     return "%s = %s\n[%s]\n(%d of %d data bytes consumed)" % (
         td.name or td.kind(), mod.fmt(v), td.tree().replace("\n", "; "),
         off, len(data))
+
+
+def tool_lva_worker(args):
+    """Drive ONE Scripting Server 2020 worker VI via COM (lva_worker.vbs)."""
+    if not os.path.isfile(LVA_WORKER_VBS):
+        return "ERROR: %s not found" % LVA_WORKER_VBS
+    worker = (args.get("worker_path") or "").strip()
+    if not worker:
+        return "ERROR: worker_path required (e.g. %s\\Do Get Open VIs.vi)" % LVA_WORKERS
+    if not os.path.isabs(worker) or not os.path.isfile(worker):
+        cand = os.path.join(LVA_WORKERS, worker)
+        cand2 = cand if cand.endswith(".vi") else cand + ".vi"
+        if os.path.isfile(cand2):
+            worker = cand2
+        elif os.path.isfile(cand):
+            worker = cand
+        else:
+            return ("ERROR: worker VI not found: %s (and not in %s)" %
+                    (worker, LVA_WORKERS))
+    # 32-bit cscript -> attaches to / launches the background 32-bit LV2020
+    # that owns the LV2020-format worker VIs (COM instance map, see KB).
+    cscript = r"C:\Windows\SysWOW64\cscript.exe"
+    if not os.path.isfile(cscript):
+        cscript = "cscript"
+    cmd = [cscript, "//nologo", LVA_WORKER_VBS, worker]
+    for s in (args.get("set") or []):
+        cmd.append(str(s))
+    for r in (args.get("read") or []):
+        cmd.append("--read=%s" % r)
+    sleep_ms = int(args.get("sleep_ms") or 0)
+    if sleep_ms:
+        cmd.append("--sleep=%d" % sleep_ms)
+    else:
+        cmd.append("--sleep=12000")
+    return run(cmd, timeout=240)
 
 
 def tool_lv_guidance(args):
@@ -1024,6 +1153,40 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {}}
     },
     {
+        "name": "lva_worker",
+        "description": (
+            "Drive ONE Scripting Server 2020 worker VI ('Do *.vi' or plain "
+            "worker, JanGoebel labview_assistant LV2020 conversion) via COM "
+            "in a background 32-bit LV2020 (lva_worker.vbs). Sets FP controls, "
+            "runs, waits, reads back. 'set' items use the grammar "
+            "'Control=s:value|e:|b:false|i:5' ('|' separates array elements; "
+            "e: = Empty/notifier placeholder). 'read' items are control names. "
+            "IMPORTANT LIMITATION: session-dependent workers (anything taking "
+            "vi_id/object_id) return EMPTY results outside the server context "
+            "- the Data Cluster refnum registry cannot cross COM variant "
+            "arrays; chains need an in-LabVIEW runner VI. Standalone-drivable "
+            "here: the 'Do *.vi' wrappers (verified: Do Get Open VIs.vi, "
+            "Do Save VI.vi, Do create project.vi, Do Get Library.vi) with "
+            "the flat argument arrays in "
+            "skill-labview-code/references/scripting-server-2020.md (e.g. "
+            "save_vi Argument = Array(1, abs_path, Empty, False) - explicit "
+            "path MANDATORY). Plain API members (get-available-objects.vi, "
+            "get_allowed_paths.vi, ...) are NOT standalone-runnable (0x3EB "
+            "missing-subVI context) - run vi-scripting-server.vi for those. "
+            "path MANDATORY). worker_path may be absolute or a bare filename "
+            "resolved in scripting-server-2020\\Scripting Server."),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "worker_path": {"type": "string", "description": "Absolute path or filename of the worker .vi"},
+                "set": {"type": "array", "items": {"type": "string"}, "description": "Control assignments, e.g. ['save_vi Argument=i:1|s:C:\\tmp\\x.vi|e:|b:false']"},
+                "read": {"type": "array", "items": {"type": "string"}, "description": "Control names to read after the run"},
+                "sleep_ms": {"type": "integer", "description": "Wait after Run before reading (default 12000)"}
+            },
+            "required": ["worker_path"]
+        }
+    },
+    {
         "name": "manage_processes",
         "description": (
             "List running LabVIEW processes (pid + executable path, which "
@@ -1055,6 +1218,7 @@ TOOLS_IMPL = {
     "gateway_batch": tool_gateway_batch,
     "arrread": tool_arrread,
     "getval": tool_getval,
+    "lva_worker": tool_lva_worker,
     "lv_reference": tool_lv_reference,
     "lv_guidance": tool_lv_guidance,
     "manage_processes": tool_manage_processes,

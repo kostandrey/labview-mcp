@@ -554,13 +554,16 @@ template.
 
 A zero-dependency MCP stdio server wrapping these same tools lives at
 `C:\LabView skill\mcp-labview\` (see its README for Zed/Claude Desktop
-config). It adds three capabilities this skill's scripts do not have:
+config). It adds four capabilities this skill's scripts do not have:
 `search_ni_docs` / `fetch_ni_doc` (programmatic ni.com documentation
 retrieval via NI's unofficial keyless `docs-be.ni.com` backend),
 `lv_guidance` (static best-practice text: documentation-access strategy,
 programming patterns incl. state machine/producer-consumer, codegen
-guardrails) and
-MCP-native tool schemas for everything else. Note: NI's Nigel AI agent is
+guardrails), `lva_worker` (drive one Scripting Server 2020 `Do *.vi`
+worker per call via COM in a background 32-bit LV2020) and
+MCP-native tool schemas for everything else (17 tools). An
+allowed-paths guardrail (`mcp-labview/allowed_paths.json`) restricts
+gateway WRITE verbs to whitelisted directories. Note: NI's Nigel AI agent is
 an MCP *client* (no public API for its knowledge) - this server can be
 registered into Nigel on LabVIEW 2025 Q3+ with a license.
 

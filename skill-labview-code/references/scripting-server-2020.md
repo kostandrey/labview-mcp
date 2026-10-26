@@ -46,6 +46,17 @@ push to any public remote. A `README.md` in the folder states this.
    (open-VI registry with live refnums) cannot be created through COM
    variant arrays. Anything needing a vi_id/object_id chain requires
    an in-LabVIEW runner VI (like `exp13_runner.vi`), not a script.
+   **Evening follow-up:** plain API members (`get-available-objects.vi`,
+   `get_allowed_paths.vi`, ...) are NOT standalone-runnable at all -
+   `Run True` fails 0x3EB (subVI not located / DQMH API context). Only
+   the `Do *.vi` wrappers execute standalone. For the full 28-tool API
+   run `vi-scripting-server.vi`.
+3. **From our MCP server (v1.3.0+)**: the `lva_worker` tool wraps
+   `mcp-labview/scripts/lva_worker.vbs` (32-bit cscript -> background
+   32-bit LV2020) with the same set/read/sleep grammar; resolves bare
+   filenames in `Scripting Server\`. Verified end-to-end 2026-10-26:
+   `lva_worker Do Get Open VIs.vi` attached 20.0.1, ran, read back
+   `[0; False]` (empty outside server, as expected).
 
 ## 3. Capability comparison vs our Gateway
 
@@ -141,3 +152,15 @@ in LV2020). See gateway-recipe v3.35/v3.36 and reuse section 6.
   by name not applicable, expected).
 - Standalone `Do Get Open VIs.vi` run 0x0, argument readable, but
   output empty outside server context (see section 2 limitation).
+
+## 7. What was borrowed into our harness (2026-10-26 evening)
+
+- **`lva_worker` MCP tool** (server.py v1.3.0): wraps
+  `mcp-labview/scripts/lva_worker.vbs`; drives one `Do *.vi` worker per
+  call in the background 32-bit LV2020 (see section 2.3).
+- **Allowed-paths guardrail**: `mcp-labview/allowed_paths.json`
+  (whitelist of case-insensitive dir prefixes, default: the project +
+  `%TEMP%\lv_mcp`) gates gateway write verbs, gateway_batch write
+  lines and `delete;`/`copy;` meta-lines - borrowed from this
+  server's `config.json` `Allowed Paths` whitelist. Delete the file
+  (or empty the list) to run unrestricted.

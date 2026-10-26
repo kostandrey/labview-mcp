@@ -71,7 +71,15 @@ original.
 | `gateway_batch` | Run a whole script of gateway commands in ONE LabVIEW session (one COM attach, N verbs) - much faster than one-by-one calls. |
 | `arrread` | Set/read **array control values** on a saved .vi and run it (`arrread.exe` helper). `cycle` mode = set+run+read in one process - the reliable way to verify array-input VIs from MCP. |
 | `manage_processes` | List/kill LabVIEW processes - the fix when COM fails with `ClassFactory cannot supply requested class` (orphan instance with a modal dialog). |
+| `lva_worker` | Drive ONE Scripting Server 2020 `Do *.vi` worker via COM in a background 32-bit LV2020 (`lva_worker.vbs`; set/read FP controls, run, wait, read back). Only the `Do *.vi` wrappers are standalone-runnable; session-dependent outputs are empty outside the server context (see `skill-labview-code/references/scripting-server-2020.md`). |
 | `search_knowledge` | Full-text search over the agent knowledge base (skill-labview-code SKILL.md, gateway-recipe.md session history, reference docs, style_codes.json). Use FIRST when a verb errors, a terminal map is in question, or before experimental probing. |
+
+### Allowed-paths guardrail
+
+`mcp-labview/allowed_paths.json` whitelists directories (case-insensitive
+prefixes) for all gateway WRITE verbs, `gateway_batch` write lines and
+`delete;`/`copy;` meta-lines. Default: this project + `%TEMP%\lv_mcp`.
+Delete the file or empty the list to run unrestricted.
 
 ## Gateway.vi prerequisite (for the `gateway` tool only)
 
