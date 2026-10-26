@@ -565,6 +565,13 @@ registered into Nigel on LabVIEW 2025 Q3+ with a license.
 
 - `references/labview-automation.md` - full verified findings: COM method
   matrix, export gotchas, local docs mirror, scripting capability map.
+- `references/labview-assistant-analysis.md` - Jan Goebel's independent
+  LabVIEW MCP server (github.com/JanGoebel/labview_assistant, LV2025 VIs,
+  analyzed via zlib strings): its 28-tool API and borrowable techniques
+  (live screenshots via BD.Get Image Scaled, auto-typed constants from
+  terminals, enclose_selection via the LV2025 EncloseSelection2 method).
+- `references/jake-analysis.md` - JKI Jake black-box analysis (same
+  approach class as ours; PPL internals; no reusable binaries).
 - `references/gateway-recipe.md` - build sheet for Gateway.vi (the user
   builds it once in LabVIEW; includes the v2/v3 roadmap).
 - Screenshot-only analysis (no file path) -> use the `read-block-diagram`
