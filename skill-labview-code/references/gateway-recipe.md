@@ -2616,3 +2616,55 @@ always pass an explicit path in save_vi Argument.
 + lv_batch2020.vbs + gateway\Gateway2020.vi = full read/write verb
 set on 2020-format VIs (no upconversion, no format flip). Use this
 as the DEFAULT for LV2020 exercise work from now on.
+
+## v3.37 (2026-10-27) - LVA session runner SPIKE proven (workers adoptable into Gateway approach)
+
+**Question**: can the Scripting Server `Do *.vi` workers be driven by our
+gateway/COM approach (no vi-scripting-server.vi)? **YES - proven end-to-end**
+with `_service\tmp\lva_spike.vi` (gateway-built, LV2020):
+
+- `Do Open Vi.vi` is SELF-CONTAINED (extract shows: String To Path ->
+  Is Allowed Path -> Select{Open VI Reference + Add New Reference |
+  forbidden-path error} -> Bundle By Name reply). NO module events, NO
+  notifier wait. The session registry rides in the Data Cluster.
+- Spike BD: typed `open_vi Argument` control (placed from the worker's
+  `.ctl`) -> subVI Argument; **Feedback Node** (any:2353) as session:
+  `Do Open Vi` DC out -> FN in, FN out -> DC in (uninitialized FN retains
+  the cluster across runs); reply -> UBByName -> taps.
+- COM drive (32-bit cscript, lva_worker.vbs): ArgOpen set, Run, read
+  taps. **Run1 ViId=1; two runs in ONE process: ViId=1 then ViId=2** -
+  the FN session works (probe: `mcp-labview/scripts/lva_session_probe.vbs`).
+
+**Codegen facts learned (all verified this session):**
+- **FN wiring uses n-indices** (Terms[]): [0]=out (source), [1]=init
+  (sink), [2]=in. The s* kinds (sli/sri/slo/sro) are ONLY for loop
+  SHIFT REGISTERS - `sri0` on a placed FN raises ERROR 1055.
+- **SubVI Terms[] == connector-pane CELL index** (getNode 'Control[i]'
+  = pane cell i; my failed `n|1` wire hit an UNLINKED slot, not 'error
+  out' - check the pane listing for 'not linked' rows). Do Open Vi:
+  [0]=error out, [2]=reply payload, [3]=DC out, [8]=error in,
+  [10]=Argument, [11]=DC in.
+- **Gateway-placed Unbundle By Name (any:2058) exposes elements
+  UNRELIABLY**: after adaptation both element terminals showed the
+  same element (both 'status' bools on an error cluster; both 'vi_id'
+  strings on the reply). Don't rely on placed-UB element selection -
+  tap via `gateway\Error_to_string.vi` (subVI, cells: [3]=string out,
+  [8]=error in; returns EMPTY string on no error) or dedicated
+  numeric/string indicator wires.
+- A `.ctl` placed via `any:0<...>` lands as a CONTROL (source): wiring
+  a subVI output INTO it = "connected to two data sources".
+- **Session lifetime caveat**: FN state lives in the LabVIEW instance.
+  A COM-launched background instance may close between cscript calls
+  (three separate lva_worker calls each saw a fresh session, ViId=1
+  every time). Within ONE process/instance it persists. When the
+  user's IDE is open, COM attaches to it and the session persists
+  across MCP calls. The future server tool must keep the instance
+  alive (leave the runner open / reuse one instance).
+
+**Next step (designed, not yet built)**: `gateway\LVA Session.vi` -
+same FP grammar as Gateway (Tool string + Reset Session bool + per-tool
+Argument controls + Reply/ErrText/LastID indicators), one boolean-case
+lane per tool (Case Structure any:2001 + Equal? any:1102; 2 cases, no
+new-case problem), FN session shared by all lanes, reply via per-lane
+Format Into String chained through case tunnels. server.py routes
+`lva.*` verbs to it transparently.

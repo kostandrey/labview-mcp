@@ -39,9 +39,9 @@ HELP_DIR = os.path.join(SKILL_ROOT, "help")
 GATEWAY_VI = os.path.join(SKILL_ROOT, "gateway", "Gateway.vi")
 ARRREAD_EXE = os.path.join(SKILL_ROOT, "skill-labview-code",
                            "scripts", "arrread.exe")
-# Scripting Server 2020 (borrowed JanGoebel labview_assistant, see
-# skill-labview-code/references/scripting-server-2020.md)
-LVA_DIR = os.path.join(SKILL_ROOT, "scripting-server-2020")
+# Scripting Server (borrowed JanGoebel labview_assistant, converted to
+# LV2020; see skill-labview-code/references/scripting-server-2020.md)
+LVA_DIR = os.path.join(SKILL_ROOT, "scripting-server")
 LVA_WORKERS = os.path.join(LVA_DIR, "Scripting Server")
 LVA_WORKER_VBS = os.path.join(SCRIPTS, "lva_worker.vbs")
 # Allowed-paths guardrail config (borrowed from the Scripting Server's
@@ -1174,7 +1174,7 @@ TOOLS = [
             "get_allowed_paths.vi, ...) are NOT standalone-runnable (0x3EB "
             "missing-subVI context) - run vi-scripting-server.vi for those. "
             "path MANDATORY). worker_path may be absolute or a bare filename "
-            "resolved in scripting-server-2020\\Scripting Server."),
+            "resolved in scripting-server\\Scripting Server."),
         "inputSchema": {
             "type": "object",
             "properties": {

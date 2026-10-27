@@ -1,8 +1,11 @@
 # Scripting Server 2020 (Jan Goebel "labview_assistant" converted to LV2020)
 
-Location in this repo: `scripting-server-2020\` (the complete LV2020
+Location in this repo: `scripting-server\` (RENAME 2026-10-27: the
+folder was `scripting-server-2020\`; the 2020 mark was dropped since
+this repo now keeps only LV2020-format VIs — newer LabVIEW opens them
+if needed). It is the complete LV2020
 conversion of https://github.com/JanGoebel/labview_assistant, made
-2026-10-26 with `lv_batch_saveprev.vbs` "20.0", 242/242 files ok).
+2026-10-26 with `lv_batch_saveprev.vbs` "20.0", 242/242 files ok.
 Upstream source clone: `_service\tmp\labview_assistant` (2025-format,
 gitignored). **License: none upstream = all rights reserved.** Copied
 into this LOCAL repo on explicit user instruction 2026-10-26; do NOT
@@ -10,19 +13,21 @@ push to any public remote. A `README.md` in the folder states this.
 
 ## 1. Dependence clarification (the two projects are fully independent)
 
-| | `gateway\` (ours) | `scripting-server-2020\` (theirs) |
+| | `gateway\` (ours) | `scripting-server\` (theirs) |
 |---|---|---|
 | Purpose | generic VI-scripting verb host (analyze/wires/place/wire/loop/...) | DQMH module = session server: keeps an open-VI registry (Data Cluster: References variant + Current ID) and exposes 28 MCP tools |
 | Runs | inside LabVIEW via COM (`SetControlValue`/`Run`), driven by our `server.py` | as a runnable app (`vi-scripting-server.vi`, HTTP MCP on port 36987) OR worker-by-worker via the same COM runner pattern |
 | SubVI deps | `Clear Errors`, `ReferenceResolver`, `GetTerminal`, `SelectByUID/Label`, `Error_to_string`, `Get Errors Method` + native vi.lib (`Traverse for GObjects` in `traverseref.llb`) | only its own lvlib members + native vi.lib |
 
 - **Gateway does NOT reference the Scripting Server** and vice versa
-  (verified: Gateway2020 subVI list vs Scripting Server lvlib members).
+  (verified: Gateway subVI list vs Scripting Server lvlib members).
 - `gateway2020\` (untracked, morning-session duplicate) was the SAME
   Gateway rev 183 converted again - both ping-verified; moved to
-  `_service\tmp\gateway2020_duplicate\`. Canonical home: `gateway\`
-  (has 2026 `Gateway.vi` + 2020 `Gateway2020.vi` + 2020-converted
-  subVIs, so one folder serves both LabVIEW versions).
+  `_service\tmp\gateway2020_duplicate\`. Canonical home: `gateway\`.
+  2026-10-27: the repo keeps ONLY the LV2020-format `gateway\Gateway.vi`
+  (the 2026-format original is backed up in
+  `_service\tmp\Gateway2026_backup\`, git history has it too); the
+  2020 mark was dropped from the name.
 - The 2020 copy CONTAINS the Do Save VI fix (vi_id -> ID wire,
   verified `wires` on the copy). The upstream 2025 source still has
   the unfixed `Do Save VI`.
@@ -30,7 +35,7 @@ push to any public remote. A `README.md` in the folder states this.
 ## 2. Ways to use it
 
 1. **As the original MCP server**: open
-   `scripting-server-2020\VI Scripting Server.lvproj` in LabVIEW 2020,
+   `scripting-server\VI Scripting Server.lvproj` in LabVIEW 2020,
    run `vi-scripting-server.vi`; point an MCP client at
    `http://127.0.0.1:36987/mcp/server` (see its readme.md). Not
    integrated with our `server.py` (they are two parallel MCP
@@ -57,6 +62,14 @@ push to any public remote. A `README.md` in the folder states this.
    filenames in `Scripting Server\`. Verified end-to-end 2026-10-26:
    `lva_worker Do Get Open VIs.vi` attached 20.0.1, ran, read back
    `[0; False]` (empty outside server, as expected).
+4. **Adopted into OUR harness (2026-10-27, PROVEN)**: the workers are
+   self-contained (no DQMH module needed) and the session is just the
+   Data Cluster - so a gateway-built session runner VI (Feedback Node
+   holds the cluster) can drive them per-call via COM. Spike
+   `_service\tmp\lva_spike.vi`: two runs in one instance gave
+   ViId=1 then ViId=2 (session works). Full recipe + codegen facts:
+   gateway-recipe v3.37. Session caveat: the LabVIEW instance must
+   stay alive between calls (user's open IDE = fine).
 
 ## 3. Capability comparison vs our Gateway
 
