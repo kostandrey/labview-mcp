@@ -42,9 +42,32 @@ log.WriteLine Now & " Run: 0x" & Hex(Err.Number) & " " & Err.Description
 fso.CreateTextFile(ready).Close
 log.WriteLine Now & " ready - holding references"
 
+Dim wmi3, p4, alive
 Do
   WScript.Sleep 1000
   If fso.FileExists(stopF) Then Exit Do
+  ' self-heal: if the LabVIEW process died (crash / user quit), re-attach
+  ' and restart the server - otherwise the next driver call would spawn
+  ' a doomed instance the keeper does not hold.
+  alive = False
+  Err.Clear
+  Set wmi3 = GetObject("winmgmts:\\.\root\cimv2")
+  For Each p4 In wmi3.ExecQuery("SELECT ProcessId FROM Win32_Process WHERE Name='LabVIEW.exe'")
+    alive = True
+  Next
+  If Not alive Then
+    log.WriteLine Now & " LabVIEW gone - re-attaching"
+    Err.Clear
+    Set app = CreateObject("LabVIEW.Application")
+    If Err.Number = 0 Then
+      Set vst = app.GetVIReference(base & "\scripting-server\Scripting Server\LVA_State.vi", "", False, &H20)
+      Set vi = app.GetVIReference(base & "\gateway\LVA\LVA Session.vi", "", False, &H20)
+      vi.Run True
+      log.WriteLine Now & " re-attached, server Run: 0x" & Hex(Err.Number)
+    Else
+      log.WriteLine Now & " re-attach failed 0x" & Hex(Err.Number)
+    End If
+  End If
 Loop
 log.WriteLine Now & " stop file seen - exiting (references released)"
 log.Close
