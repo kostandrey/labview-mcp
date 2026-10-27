@@ -177,3 +177,20 @@ in LV2020). See gateway-recipe v3.35/v3.36 and reuse section 6.
   lines and `delete;`/`copy;` meta-lines - borrowed from this
   server's `config.json` `Allowed Paths` whitelist. Delete the file
   (or empty the list) to run unrestricted.
+
+## 8. Persistent session server REPLACES per-call worker runs (2026-10-27)
+
+Section 2's limitation ("session-dependent workers return EMPTY
+outside the server context") is SOLVED not by running
+vi-scripting-server.vi but by our own persistent server:
+`gateway\LVA\LVA Session.vi` (full story: gateway-recipe v3.38).
+Workers `Do Open Vi.vi` / `Do Save VI.vi` run as subVIs inside a
+while-loop server; the Data Cluster (vi_id registry) survives between
+COM calls because a keeper process (lva_keeper.vbs) holds the
+LabVIEW instance alive. MCP tool: `lva_session` (open_vi / save_vi).
+Adding a lane = copy a boolean case + place the worker + an Argument
+control inside the case + extend lva_call.vbs.
+
+Gotcha carried over: the session VI must be driven with 64-BIT cscript
+(32-bit client fails SetControlValue with 0x1B6 on it) - the opposite
+of the single-worker lva_worker path which used SysWOW64.

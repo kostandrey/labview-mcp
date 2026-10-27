@@ -2668,3 +2668,102 @@ lane per tool (Case Structure any:2001 + Equal? any:1102; 2 cases, no
 new-case problem), FN session shared by all lanes, reply via per-lane
 Format Into String chained through case tunnels. server.py routes
 `lva.*` verbs to it transparently.
+
+## v3.38 (2026-10-27 afternoon) - LVA Session.vi BUILT + PERSISTENT SERVER (keeper) + MCP `lva_session` tool: END-TO-END VERIFIED
+
+**Deliverable**: `gateway\LVA\LVA Session.vi` (NOTE: must live in the
+`LVA\` subfolder - at `gateway\` depth the subVI resolution broke, the
+wrong-depth copy is deleted). While-loop server, 2 lanes (open_vi,
+save_vi), LVA_State.vi feedback-node action engine holds the Data
+Cluster between calls. Full gate passed THROUGH THE MCP TOOL LAYER:
+open A -> vi_id 1, open B -> vi_id 2 (registry persists across
+processes), save_vi -> reply path filled AND file on disk. Idle CPU
+~0% (Wait(ms) added, see below).
+
+### The keeper pattern (root-cause fix for "LabVIEW died between calls")
+
+A COM-launched LabVIEW quits when its LAST client reference is
+released. The old save failure was exactly this: the driver cscript
+exits after each call -> LabVIEW closes -> next call saw a fresh
+session (and the timed-out diagnostic saw "The callee (server [not
+server application]) is not available and disappeared"). Fix:
+`mcp-labview/scripts/lva_keeper.vbs` - attaches, GetVIReference,
+`Run True` (starts the server), then `Do : WScript.Sleep 1000` forever
+while HOLDING app+vi references; stop via
+`_service\tmp\lva_keeper_stop.txt` (checked each second). The driver
+`lva_call.vbs` ensures the keeper is running (WMI query on cscript
+command lines) before every call. A running server hierarchy does NOT
+keep LabVIEW alive by itself.
+
+### CRITICAL: cscript BITNESS
+
+- **32-bit cscript (SysWOW64) FAILS Set/GetControlValue on the session
+  VI: 0x1B6 "Object doesn't support this property or method"**
+  (verified both bitnesses back-to-back). All working paths use the
+  64-bit (System32) cscript. Out-of-process COM works cross-bitness
+  (64-bit client -> 32-bit LV2020 server fine).
+- server.py `lva_session` therefore uses System32 cscript. The old
+  `lva_worker` tool keeps SysWOW64 (its own documented context).
+- Related trap: 0x80010007 "Call was rejected by callee" = LabVIEW busy
+  - retry, don't restructure.
+
+### Other verified facts
+
+- **Run True on an ALREADY-RUNNING VI raises a trappable COM error
+  0x1964** (description text mentions 0x3E8 "VI is not in a state
+  compatible") - VBScript WITHOUT `On Error Resume Next` ABORTS on it.
+  Every COM call in the driver/keeper sits under On Error Resume Next
+  + explicit Err.Number checks. (This is why e2e3 worked and the first
+  driver version didn't.)
+- **Tunnels freeze** (re-confirmed): a control wired through a loop
+  tunnel delivers the PRE-RUN value only; COM SetControlValue mid-run
+  never propagates. Tool/Arg controls live INSIDE the loop/cases as FP
+  objects (placed via resolver `%WhileLoop|Loop1` / into case diagrams
+  with plain coords inside the case bounds).
+- **Reply-via-file is the only reliable channel during a run**
+  (GetControlValue returns defaults mid-run, re-proven). Reply files:
+  `_service\tmp\lva_reply_open.txt` (reply cluster XML incl. error),
+  `lva_reply_save.txt` (Path XML; EMPTY `<Val>` = save failed).
+  Diagnostics: WT4 writes live Tool to `lva_server_trig.txt`, WT3
+  writes `lva_server_tool.txt` (e2e3 once probed a wrong tick filename
+  - harmless).
+- **Edge trigger needs reset**: driver sets Tool="" then the real tool
+  (Chg = change detection); repeated same-tool calls otherwise never
+  fire.
+- **CPU fix**: Wait(ms) (any:1302, input Terms[1]='milliseconds to
+  wait', [0]=ms timer value out) + Numeric Constant (any:2005) placed
+  INSIDE Loop1 via resolver, wired `c|0|n|1`, 20 ms -> 100% spin became
+  ~0-10% idle, full e2e still passes, lane latency still <1 s.
+- **open_vi assigns vi_id even on FAILURE** (missing file -> error 7
+  reply with vi_id still incremented; parse vi_id but CHECK the error
+  cluster). open target must EXIST on disk.
+- **GetControlValue on a cluster control silently DROPS Empty
+  (notifier) elements** in the returned variant array (ArgSave readback
+  showed 3 elements of 4) - don't rely on element positions for
+  notifier-containing clusters.
+- **Read-verb copy trap** (re-confirmed): gateway analyze/wires/errors
+  copy the VI to %TEMP%\lv_mcp\ where lvlib-owned subVIs show false
+  "Type definition not found / SubVI is not executable". Authoritative
+  check: run it (keeper + driver e2e).
+- Editing the RUNNING server VI blocks all gateway verbs -> stop
+  keeper (stop file), `taskkill //F //IM LabVIEW.exe`, edit, restart.
+
+### MCP integration
+
+`lva_session` tool (server.py) -> `lva_call.vbs open_vi <path>` /
+`save_vi <id> <path>`; reply XML on stdout, exit 0/1. Keeper startup
+adds up to ~90 s on the first call after a reboot. validate_tools.py:
+18 tools, 0 invalid (must run with `server.py` path arg from
+mcp-labview/, default `-m server` resolves wrong cwd).
+
+Scripts (mcp-labview/scripts/): lva_call.vbs (driver), lva_keeper.vbs
+(persistent holder), lva_diag1/2.vbs (repro), lva_wait_e2e.vbs (copy
+run-test), lva_bits_probe.vbs (bitness probe), lva_cpu_probe.vbs,
+lva_server_e2e3.vbs + lva_server_bg.vbs (earlier probes).
+Scratch: _service\tmp\lva_server*.vi, lva_loop_tool*.vi.
+
+**Left unverified / TODO**: 32-bit LabVIEW spawned via 64-bit client
+COM shows no visible window (fine for a server); if a visible IDE is
+wanted, launch it manually - COM attaches to the running instance.
+More lanes (get_open_vis, add_subvi, ...) = copy a case + Argument
+control inside the new case + extend lva_call.vbs dispatch.

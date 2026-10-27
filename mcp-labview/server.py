@@ -44,6 +44,16 @@ ARRREAD_EXE = os.path.join(SKILL_ROOT, "skill-labview-code",
 LVA_DIR = os.path.join(SKILL_ROOT, "scripting-server")
 LVA_WORKERS = os.path.join(LVA_DIR, "Scripting Server")
 LVA_WORKER_VBS = os.path.join(SCRIPTS, "lva_worker.vbs")
+LVA_SESSION_VI = os.path.join(SKILL_ROOT, "gateway", "LVA", "LVA Session.vi")
+LVA_CALL_VBS = os.path.join(SCRIPTS, "lva_call.vbs")
+# 64-BIT cscript REQUIRED for lva_session: the 32-bit client fails
+# SetControlValue/GetControlValue on the session VI with 0x1B6 "Object
+# doesn't support this property or method" (verified 2026-10-27 both
+# bitnesses; out-of-process COM itself works cross-bitness).
+CSCRIPT = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"),
+                       "System32", "cscript.exe")
+if not os.path.isfile(CSCRIPT):
+    CSCRIPT = "cscript"
 # Allowed-paths guardrail config (borrowed from the Scripting Server's
 # config.json Allowed Paths whitelist). Missing file = unrestricted.
 ALLOWED_PATHS_FILE = os.path.join(ROOT, "allowed_paths.json")
@@ -609,6 +619,35 @@ def tool_lva_worker(args):
     return run(cmd, timeout=240)
 
 
+def tool_lva_session(args):
+    """Persistent-session call to the LVA Session server (gateway\\LVA\\LVA Session.vi)
+    via lva_call.vbs. Session state (Data Cluster vi_id registry) survives
+    between calls - a keeper process (lva_keeper.vbs) holds the COM reference
+    so the COM-launched LabVIEW never quits between calls. Request goes in via
+    COM SetControlValue, reply comes back via file (GetControlValue is stale
+    during a run). Verified end-to-end 2026-10-27: open_vi -> vi_id, save_vi
+    -> file on disk, vi_id registry persists (open A -> 1, open B -> 2)."""
+    if not os.path.isfile(LVA_CALL_VBS):
+        return "ERROR: %s not found" % LVA_CALL_VBS
+    tool = (args.get("tool") or "").strip()
+    if tool not in ("open_vi", "save_vi"):
+        return "ERROR: tool must be open_vi or save_vi (got %r)" % tool
+    cmd = [CSCRIPT, "//nologo", LVA_CALL_VBS, tool]
+    if tool == "open_vi":
+        p = (args.get("vi_path") or "").strip()
+        if not p:
+            return "ERROR: vi_path required for open_vi"
+        cmd.append(p)
+    else:
+        vid = args.get("vi_id")
+        sp = (args.get("save_path") or "").strip()
+        if vid is None or not sp:
+            return "ERROR: vi_id and save_path required for save_vi"
+        cmd.append(str(int(vid)))
+        cmd.append(sp)
+    return run(cmd, timeout=240)
+
+
 def tool_lv_guidance(args):
     """Static best-practice guidance: documentation access, patterns, guardrails."""
     return (
@@ -1138,6 +1177,38 @@ TOOLS = [
         }
     },
     {
+        "name": "lva_session",
+        "description": (
+            "Persistent-session scripting server call: opens/saves VIs with "
+            "session state that SURVIVES between calls (gateway\\LVA\\LVA "
+            "Session.vi, driven via lva_call.vbs; a keeper process holds the "
+            "COM reference so the LabVIEW instance and its Data Cluster "
+            "vi_id registry stay alive). open_vi: open a .vi from disk into "
+            "the session, returns reply XML with vi_id (+error cluster; note "
+            "vi_id is assigned even when open fails). save_vi: save a "
+            "previously opened vi_id to an explicit absolute save_path "
+            "(MANDATORY - Save As), returns reply XML with the final path; "
+            "EMPTY <Val> = save failed. Verified end-to-end 2026-10-27: "
+            "open A -> vi_id 1, open B -> vi_id 2 (registry persists), "
+            "save_vi 1 path -> file on disk. Idles at ~0% CPU (20 ms loop "
+            "wait). First call may take up to ~90 s if the keeper/LabVIEW "
+            "must start."),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "tool": {"type": "string", "enum": ["open_vi", "save_vi"],
+                          "description": "Which server lane to trigger"},
+                "vi_path": {"type": "string",
+                             "description": "open_vi: absolute path of the .vi to open (file must exist on disk)"},
+                "vi_id": {"type": "integer",
+                           "description": "save_vi: session vi_id returned by a previous open_vi"},
+                "save_path": {"type": "string",
+                               "description": "save_vi: absolute path to Save As (mandatory)"}
+            },
+            "required": ["tool"]
+        }
+    },
+    {
         "name": "lv_guidance",
         "description": (
             "Static best-practice guidance for LabVIEW code generation: "
@@ -1164,7 +1235,10 @@ TOOLS = [
             "IMPORTANT LIMITATION: session-dependent workers (anything taking "
             "vi_id/object_id) return EMPTY results outside the server context "
             "- the Data Cluster refnum registry cannot cross COM variant "
-            "arrays; chains need an in-LabVIEW runner VI. Standalone-drivable "
+            "arrays; chains need an in-LabVIEW runner VI - NOW AVAILABLE: "
+            "use the lva_session tool (persistent server gateway\\LVA\\LVA "
+            "Session.vi) for open_vi/save_vi with surviving session state. "
+            "Standalone-drivable "
             "here: the 'Do *.vi' wrappers (verified: Do Get Open VIs.vi, "
             "Do Save VI.vi, Do create project.vi, Do Get Library.vi) with "
             "the flat argument arrays in "
@@ -1219,6 +1293,7 @@ TOOLS_IMPL = {
     "arrread": tool_arrread,
     "getval": tool_getval,
     "lva_worker": tool_lva_worker,
+    "lva_session": tool_lva_session,
     "lv_reference": tool_lv_reference,
     "lv_guidance": tool_lv_guidance,
     "manage_processes": tool_manage_processes,
