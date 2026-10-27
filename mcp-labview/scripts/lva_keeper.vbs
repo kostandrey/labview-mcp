@@ -28,6 +28,10 @@ If Err.Number <> 0 Then
 End If
 log.WriteLine Now & " attached " & app.Version
 
+' NOTE: no LVA_State preload needed - the session VI's subVI links are
+' correct (scripting-server\Scripting Server\ copies, verified 16:03).
+' A top-level Run True on LVA_State hung once in a half-initialized
+' instance, so it is deliberately not used here.
 Set vi = app.GetVIReference(base & "\gateway\LVA\LVA Session.vi", "", False, &H20)
 log.WriteLine Now & " ref ok"
 

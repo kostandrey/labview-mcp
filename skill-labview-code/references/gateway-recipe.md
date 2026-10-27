@@ -2762,8 +2762,63 @@ run-test), lva_bits_probe.vbs (bitness probe), lva_cpu_probe.vbs,
 lva_server_e2e3.vbs + lva_server_bg.vbs (earlier probes).
 Scratch: _service\tmp\lva_server*.vi, lva_loop_tool*.vi.
 
-**Left unverified / TODO**: 32-bit LabVIEW spawned via 64-bit client
-COM shows no visible window (fine for a server); if a visible IDE is
+**Left unverified / TODO**: 32-bit LabVIEW spawned via 64-bit client COM
+shows no visible window (fine for a server); if a visible IDE is
 wanted, launch it manually - COM attaches to the running instance.
 More lanes (get_open_vis, add_subvi, ...) = copy a case + Argument
 control inside the new case + extend lva_call.vbs dispatch.
+
+## v3.39 (2026-10-27 evening) - "broken after cleanup" ROOT-CAUGHT: STALE SUBVI LINK RE-BINDING; detection via binary PTH0 dump
+
+**Symptom**: after the user cleaned the session VI's BD in the IDE and
+saved, open_vi still worked but save_vi returned an EMPTY path - in a
+GUARANTEED-fresh instance, no preload, correct lib, identical wiring.
+
+**Root cause**: the cleaned VI's stored subVI link for `Do Save VI.vi`
+pointed to **`_service\tmp\lva_2020_tree\Scripting Server\Do Save
+VI.vi`** - the OLD BROKEN copy (v3.35's error-1026 one) - while
+`Do Open Vi.vi` / `LVA_State.vi` pointed to the fixed
+`scripting-server\Scripting Server\` copies. The stale copy loads,
+runs, and returns an empty VI Path. The re-bind happened when the VI
+was SAVED in an instance that had the old Do Save VI in memory (the
+broken-lib window). **Opening + saving a VI in an instance with stale
+subVI copies SILENTLY rewrites its links.**
+
+**Detection (fast, reliable)**: dump the .vi binary and inspect the
+`PTH0` path records after each subVI name::
+
+    python -c "import re; data=open(r'<vi>','rb').read();
+    [print(re.sub(rb'[^\x20-\x7e]',b'.',m.group(0)).decode())
+    for m in re.finditer(rb'Do Save VI\\.vi.{0,10}PTH0.{0,140}', data)]"
+
+The bytes after `PTH0...<len>` are the stored relative path components
+(e.g. `...7........scripting-server.Scripting Server.Do Save VI.vi`
+= good; `...A........_service.tmp.lva_2020_tree...` = stale). Works
+even while everything else (wires verb, errors verb, Run True) looks
+innocent. Compare the SAME record across a working and a broken copy.
+
+**Fix applied**: restored the known-good pre-cleanup VI
+(`_service\tmp\lva_server.vi` -> `gateway\LVA\LVA Session.vi`); full
+MCP-level gate re-passed (open 1 -> save file-on-disk -> open 2).
+Re-cleaning the BD is SAFE as long as the instance has the correct
+copies loaded (fresh instance, or after the lib fix) - the danger was
+only saving while a stale copy was bound. To relink in place:
+preload the correct copy by absolute path, open the VI, and
+`vi.SaveInstrument <abs path>, False, False` (COM save; plain `vi.Save`
+does NOT exist - 0x1B6).
+
+**Other findings this round**:
+- `getval` on a BD Boolean CONSTANT is UNRELIABLE: it reported
+  `SetT1 = True` for a node the strings export proves is a `False
+  Constant`. Trust the extract strings export for node types/values.
+- A `Run True` on LVA_State.vi (action engine, top-level) HUNG for >30
+  min once in a half-initialized COM-spawned instance (keeper log
+  stopped between two WriteLines). Not reproducible; the keeper no
+  longer runs it - and no preload is needed at all once links are
+  correct (dep probe: all 7 VIs RUN OK, session-first, fresh instance).
+- `Run True` on an already-running VI raises 0x1964 - a VBScript
+  without On Error Resume Next ABORTS there (why early drivers died at
+  line 50).
+- Keeper/driver/smoke scripts updated: no preload; keeper attaches ->
+  ref -> Run True -> ready marker. Full chain verified through the MCP
+  lva_session tool (open 1 / save / open 2 with registry persisting).
