@@ -58,7 +58,7 @@ if not os.path.isfile(CSCRIPT):
 # config.json Allowed Paths whitelist). Missing file = unrestricted.
 ALLOWED_PATHS_FILE = os.path.join(ROOT, "allowed_paths.json")
 SERVER_NAME = "labview-mcp"
-SERVER_VERSION = "1.3.0"
+SERVER_VERSION = "1.6.0"
 
 
 def log(msg):
