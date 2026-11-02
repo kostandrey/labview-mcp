@@ -2822,3 +2822,55 @@ does NOT exist - 0x1B6).
 - Keeper/driver/smoke scripts updated: no preload; keeper attaches ->
   ref -> Run True -> ready marker. Full chain verified through the MCP
   lva_session tool (open 1 / save / open 2 with registry persisting).
+
+## v3.40 (2026-11-02) - user-built `BD` verb + analyze POS/AREA verified; Create* Position input IGNORED by LabVIEW 2020
+
+The user extended Gateway.vi (analyze position/bounds + new `BD` verb).
+Adopted into server.py + validated (18 tools, 0 invalid).
+
+**analyze POS/AREA (restored version, verified)**: every object line now
+ends `; POS: x,y; AREA: w,h` - FP object positions with `arg1='FP'`, BD
+node positions otherwise. AREA is WIDTH,HEIGHT (the first 10:12 build
+reported h,w; the restored 11:00+ build reports w,h - re-check if in
+doubt). Use structure AREA to avoid dropping nodes inside loops.
+
+**BD verb (arg1 = action)**, all verified on `gen/testBDVerb.vi` copies:
+- `CleanUp` -> `CleanUp: OK`; `RemWireLooseEnds` -> `RemWireLooseEnds: OK`
+  (TopLvlDiag methods, no further args).
+- `CreateConstFromDataType` -> `OK UID: <n>`; arg2 = XML data type in the
+  SAME setVal:XML format (a full getval reply; single-line is fine),
+  arg3 = `'x,y,Label'`. Verified: DBL constant `TestConst1 = 0.0` created
+  from type string `[6,16394,377]` + 8 zero data bytes; label applied.
+- `CreateFromDataType` is **NOT implemented** -> falls to Default:
+  `Error: Methor not known: CreateFromDataType` (typo is in the VI).
+
+**CRITICAL FINDING - the method's Position input is IGNORED**: arg3
+30,20 vs 500,400 landed the constant at the identical spot (-10,-8).
+Decisive test: setval'd the case's base `Position` cluster constant to
+(777,888) in a harness copy (bypassing all arg3 parsing) -> constant
+STILL landed at (-10,-8); repeated creates exactly overlap. So
+`Diagram.Create from Data Type` (method id 12305) ignores its Position
+parameter in LV2020.1f1 64-bit. **Workaround: `GObject.Move` (method id
+10200, position + optional owner) on the New Object Ref after creation**
+- the gateway `loop` verb already uses a Move invoke. Fix in Gateway.vi:
+  replace the Position method input with a Move invoke on New Object Ref.
+
+**Techniques used / reusable**:
+- Gateway.vi CANNOT inspect itself (`wires` on it -> ERROR 1320 Property
+  Node arg 3; harness copy targeting the original -> ERROR 1055 To More
+  Specific Class). To inspect Gateway's own BD: make a FILE COPY and
+  target the copy - `wires; <copy>.vi` works and dumps all case contents
+  with terminal names (this is how the Create* wiring was verified).
+- `setval` XML reaches constants INSIDE case diagrams via
+  `%ClusterConstant|Position` (SelectByLabel descends into structures for
+  constants). The XML `<String><Val>` data is BIG-ENDIAN (I16 777 =
+  `0309`, not `0903`).
+- Driver `_service\tmp\lv_gw_call.vbs <harness.vi> <verb> <viPath>
+  [arg1..3] [outFile]` runs ANY verb through an arbitrary harness copy
+  (the MCP gateway tool is pinned to Gateway.vi).
+- `XML_to_Variant.vi` (new gateway helper): Unflatten From XML -> parse
+  HEX data string -> Flattened String To Variant; arg2 format is exactly
+  the getval reply.
+- Scratch: `gen/testBDVerb.vi` (Add x+y fixture, untracked - user's);
+  bdtest*.vi in `_service\tmp`; `gateway\Gateway_Copy.vi` is the user's
+  inspection copy (untracked, not committed).

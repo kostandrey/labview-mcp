@@ -146,7 +146,10 @@ all tested 2026-10-19 - prefer these over raw verb sequences):**
 - `analyze` - one line per block-diagram object:
   `i: ClassName [label] owner=OwnerClass` - enough for a structural
   pseudocode skeleton (terminals, functions, structures, nesting via
-  owner). Combine with Mode 1 images for exact wiring.
+  owner). Combine with Mode 1 images for exact wiring. Since v3.40 every
+  line also ends `; POS: x,y; AREA: w,h` (arg1='FP' = front-panel
+  objects, default = BD node positions; w,h order per recipe v3.40) -
+  use structure AREA to avoid dropping nodes inside loops.
 - `wires` (wire-centric; full spec in the recipe) - one line per wire:
   `Wire: label:"..." broken:0|1 UID:<n> -> <terminal> --> <terminal> ;`
   where each terminal is `Label(TermUID) [][OwnerClass] of Node{ UID,
@@ -198,6 +201,14 @@ any loop/accumulator generation task.
 Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
 "v3 build sheet"):
 
+- **`BD` - block-diagram actions (v3.40, user-built)**: arg1 =
+  `CleanUp` / `RemWireLooseEnds` (no more args) or
+  `CreateConstFromDataType` (arg2 = XML data type in the setVal:XML
+  format, arg3 = `'x,y,Label'`; returns `UID: <n>`). VERIFIED: the
+  created object's TYPE+VALUE are correct, but **LabVIEW 2020 ignores
+  the method's Position input** - created objects land at a fixed spot;
+  move them afterwards with `GObject.Move` (recipe v3.40).
+  `CreateFromDataType` is NOT implemented ("Error: Methor not known").
 - `delete` - remove a GObject/wire: vi_path = container resolver (or
   plain for top-level), arg1 = class ('GObject' = any, 'Wire'), arg2 =
   'U:<uid>' or 'L:<label>'. `analyze`/`wires` print UIDs. NOTE: in batch
