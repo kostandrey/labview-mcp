@@ -3181,3 +3181,14 @@ analyze/wires UIDs). Suggested future use: after generating a VI, run
 CompileToDFIRCPP + parse to verify the structure matches intent.
 
 server.py: verb added to the enum (validate 18 tools, 0 invalid).
+
+Follow-up test on `bdtest_demo.vi` (myCase + 3 frames): exports the
+FULL case structure semantics - `CaseStructure::Create` + SetSourceID(82)
+(= the getFrames UID!), per-frame `CreateDiagram()`,
+`CaseSelector::SetDefaultDiagramIndex(0)` + `CreateRange(0,0)/(1,1)/(2,2)`,
+`CreateTunnel(Input/Output, NonIndexing, TDR-in, TDR-out)`, and per-frame
+primitives (frame 0 Subtract UID 274, frame 1 Divide 325, frame 2 Add 43)
+with their connectivity. Constant VALUES visible in the data blob
+(demo constant 3.1 = bytes CD CC CC CC CC CC 08 40 = DBL 0x4008CCCCCCCCCCCCCD
+read little-endian - NOTE: values in TestVI_data appear LITTLE-endian,
+unlike the big-endian getval/setval transport; a parser must mind this).
