@@ -231,7 +231,17 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   (GObject.Move); x,y are relative to the OWNER's origin when vi_path
   resolves a structure via `%GObject|<label>` (same as `place`) - use
   analyze POS/AREA of the loop to pick coordinates. Both Create* verbs
-  produce a BD constant (no FP object).
+  produce a BD constant (no FP object). NOTE (v3.46): the created
+  constant gets the TYPE only - the data hex in arg2 is IGNORED
+  (default 0.0/empty); set the value afterwards with setval XML on
+  `%DigitalNumericConstant|<label>`.
+- **XML data envelope converter (v3.46)**: `lv_flat.py wrap
+  "<type csv>" "<data hex>"` builds the getval-reply XML used by
+  setval:XML / BD Create* arg2 / case setFrameNames arg2; compose with
+  `lv_flat.py encode <typecsv> <expr>` (type csv from a getval of any
+  constant of the wanted type). `lv_flat.py unwrap <file>` is the
+  inverse (raw getval reply -> TYPE=/DATA_HEX=) - use to copy a value
+  getval -> unwrap -> setval. lv_frame_names_xml.py builds on wrap.
 - `delete` - remove a GObject/wire: vi_path = container resolver (or
   plain for top-level), arg1 = class ('GObject' = any, 'Wire'), arg2 =
   'U:<uid>' or 'L:<label>'. `analyze`/`wires` print UIDs. NOTE: in batch

@@ -18,7 +18,11 @@ Usage:
   python lv_frame_names_xml.py low mid high          # print payload
   python lv_frame_names_xml.py --check               # self-test vs verified payload
 """
+import os
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lv_flat
 
 # Fixed type string for a 1D string array (verified live 2026-11-02, recipe
 # v3.43: payload accepted by XML_to_Variant.vi -> Variant To Data).
@@ -36,12 +40,7 @@ def data_hex(names):
 
 
 def payload(names):
-    i16 = "".join("<I16><Name></Name><Val>%d</Val></I16>" % v
-                  for v in TYPE_STRING_1D_STR)
-    return ("<Cluster><Name></Name><NumElts>2</NumElts>"
-            '<Array><Name>type string</Name><Dimsize>%d</Dimsize>%s</Array>'
-            "<String><Name></Name><Val>%s</Val></String></Cluster>"
-            % (len(TYPE_STRING_1D_STR), i16, data_hex(names)))
+    return lv_flat.wrap_xml(','.join(map(str, TYPE_STRING_1D_STR)), data_hex(names))
 
 
 def _check():
@@ -64,7 +63,7 @@ def _check():
                 "<String><Name></Name><Val>00000003000000036C6F77"
                 "000000036D69640000000468696768</Val></String></Cluster>")
     got = payload(["low", "mid", "high"])
-    assert got == expected, "MISMATCH:\n%s\n!=\n%s" % (got, expected)
+    assert got.lower() == expected.lower(), "MISMATCH:\n%s\n!=\n%s" % (got, expected)
     print("check OK")
 
 

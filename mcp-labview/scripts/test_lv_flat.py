@@ -128,6 +128,101 @@ check('errc enc', hexerr,
 v, _ = F.dec_data(td, bytes.fromhex(hexerr), 0)
 check('errc rt', v, [('status', True), ('code', -1), ('source', "User's error")])
 
+# ---- XML envelope (wrap/unwrap) ------------------------------------------
+
+# Verified live v3.43: setFrameNames payload for low/mid/high
+STR_ARR_TD = '26,16448,1,-1,-1,8,48,-1,-1,1875,29810,16754,29233'
+env = F.wrap_xml(STR_ARR_TD, '00000003000000036C6F77000000036D69640000000468696768')
+check('wrap setFrameNames', env,
+      '<Cluster><Name></Name><NumElts>2</NumElts><Array><Name>type string</Name>'
+      '<Dimsize>13</Dimsize>'
+      + ''.join('<I16><Name></Name><Val>%d</Val></I16>' % v for v in
+                [26, 16448, 1, -1, -1, 8, 48, -1, -1, 1875, 29810, 16754, 29233])
+      + '</Array><String><Name></Name>'
+        '<Val>00000003000000036c6f77000000036d69640000000468696768</Val>'
+        '</String></Cluster>')
+
+# unwrap round-trip on the wrapped envelope (and on the RAW multi-line
+# getval reply format, which has the same elements)
+typ, dhex = F.unwrap_xml(env)
+check('unwrap typ', typ, STR_ARR_TD)
+check('unwrap hex', dhex, '00000003000000036c6f77000000036d69640000000468696768')
+
+RAW_REPLY = '''<Cluster>
+<Name></Name>
+<NumElts>2</NumElts>
+<Array>
+<Name>type string</Name>
+<Dimsize>13</Dimsize>
+<I16>
+<Name></Name>
+<Val>26</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>16448</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>1</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>-1</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>-1</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>8</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>48</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>-1</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>-1</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>1875</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>29810</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>16754</Val>
+</I16>
+<I16>
+<Name></Name>
+<Val>29233</Val>
+</I16>
+</Array>
+<String>
+<Name></Name>
+<Val>00000000</Val>
+</String>
+</Cluster>'''
+typ, dhex = F.unwrap_xml(RAW_REPLY)
+check('unwrap raw typ', typ, STR_ARR_TD)
+check('unwrap raw hex', dhex, '00000000')
+
+# wrap normalizes whitespace/case in the data hex
+check('wrap norm', F.wrap_xml('4,10', '3F F8 0000 0000 0000'),
+      '<Cluster><Name></Name><NumElts>2</NumElts><Array><Name>type string</Name>'
+      '<Dimsize>2</Dimsize><I16><Name></Name><Val>4</Val></I16>'
+      '<I16><Name></Name><Val>10</Val></I16></Array>'
+      '<String><Name></Name><Val>3ff8000000000000</Val></String></Cluster>')
+
 # ---- result -------------------------------------------------------------
 
 if fails:

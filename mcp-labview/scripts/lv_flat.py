@@ -26,6 +26,15 @@ Usage:
                                               string with "Data type array:"/"Data
                                               string hex='", or lv_getval_hex.vbs
                                               output with TYPE=/DATA_HEX=; '-' = stdin)
+  lv_flat.py wrap "<i16 csv>" "<data hex>"    build the single-line XML envelope
+                                              (getval-reply format) used by setval:XML,
+                                              BD Create*FromDataType arg2 and
+                                              case;setFrameNames arg2
+  lv_flat.py unwrap <file>                    inverse of wrap: print TYPE=csv /
+                                              DATA_HEX=hex from an XML envelope
+                                              (raw getval reply, multi- or single-line;
+                                              also accepts lv_getval_hex.vbs output;
+                                              '-' = stdin)
 
 Value expression grammar (encode): bare number (per descriptor type),
 b:true|false, s:text, a:[1,2,...] (nested lists for nD), c:(v1,v2,...),
@@ -329,6 +338,46 @@ def enc_data(td, val):
     raise ValueError('encode of %s not supported' % td.kind())
 
 
+# ---------------- XML envelope (setval:XML / Create*FromDataType / setFrameNames) ----------------
+
+def wrap_xml(typ_csv, data_hex):
+    """Build the single-line getval-reply XML envelope.
+
+    Format verified live (recipe v3.43): <Cluster> with NumElts 2,
+    Array 'type string' FIRST (one <I16><Name></Name><Val> per element +
+    <Dimsize>), String with HEX data LAST. Element order matters; the
+    embedded names are ignored.
+    """
+    vals = [t.strip() for t in typ_csv.replace('\n', ' ').split(',') if t.strip()]
+    hexdata = ''.join(data_hex.split()).lower()
+    if not all(('0' <= ch <= '9') or ('a' <= ch <= 'f') for ch in hexdata):
+        raise ValueError('data hex invalid: %r' % data_hex)
+    i16 = ''.join('<I16><Name></Name><Val>%d</Val></I16>' % int(v) for v in vals)
+    return ('<Cluster><Name></Name><NumElts>2</NumElts>'
+            '<Array><Name>type string</Name><Dimsize>%d</Dimsize>%s</Array>'
+            '<String><Name></Name><Val>%s</Val></String></Cluster>'
+            % (len(vals), i16, hexdata))
+
+
+def unwrap_xml(text):
+    """Parse an XML envelope (raw getval reply) -> (type_csv, data_hex).
+
+    Tolerates multi-line pretty-printed replies and the compact form
+    (<I16> with many <Val> children) emitted by older gateways.
+    """
+    m = re.search(r'<Array>.*?</Array>', text, re.S)
+    if not m:
+        raise ValueError('no <Array> type string in envelope')
+    typ = ','.join(re.findall(r'<Val>\s*(-?\d+)\s*</Val>', m.group(0)))
+    m = re.search(r'<String>.*?</String>', text, re.S)
+    if not m:
+        raise ValueError('no <String> data in envelope')
+    mm = re.search(r'<Val>\s*([0-9a-fA-F]*)\s*</Val>', m.group(0))
+    if mm is None:
+        raise ValueError('no hex data in envelope')
+    return typ, mm.group(1).lower()
+
+
 # ---------------- CLI ----------------
 
 def main(argv):
@@ -355,6 +404,15 @@ def main(argv):
         td, _ = parse_td(b, 0)
         out = enc_data(td, parse_expr(argv[3]))
         print(out.hex())
+        return 0
+    if cmd == 'wrap':
+        print(wrap_xml(argv[2], argv[3]))
+        return 0
+    if cmd == 'unwrap':
+        text = sys.stdin.read() if argv[2] == '-' else open(argv[2], encoding='latin1').read()
+        typ, dhex = unwrap_xml(text)
+        print('TYPE=' + typ)
+        print('DATA_HEX=' + dhex)
         return 0
     if cmd == 'reply':
         text = sys.stdin.read() if argv[2] == '-' else open(argv[2], encoding='latin1').read()

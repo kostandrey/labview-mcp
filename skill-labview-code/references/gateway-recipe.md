@@ -3023,3 +3023,36 @@ Reliability pass over the new `case` tools:
   3. addFrame returns the new frame's Diagram UID - usable immediately
      with analyze/place/delete resolvers without another getFrames.
 - Scratch: bdtest12.vi (helper verification copy).
+
+## v3.46 (2026-11-02) - canonical XML-envelope converter: lv_flat.py wrap/unwrap
+
+The XML <-> flattened-data pattern (getval reply envelope) is now used
+by setval:XML, BD Create*FromDataType and case;setFrameNames - made it
+a reusable converter in lv_flat.py (all under mcp-labview/scripts/):
+
+- `lv_flat.py wrap "<type csv>" "<data hex>"` -> single-line XML
+  envelope (Array first, per-element <I16> tags, String last;
+  normalizes hex whitespace/case). Compose with `encode`:
+  `lv_flat.py encode 4,10 43.5` -> `4045c00000000000`, then
+  `lv_flat.py wrap 4,10 4045c00000000000`.
+- `lv_flat.py unwrap <file|->` -> TYPE=csv / DATA_HEX=hex from a raw
+  (multi- or single-line) getval reply; matches lv_getval_hex.vbs
+  output byte-for-byte (verified on the StrArr1 reply). Use to COPY a
+  value: getval source -> unwrap -> setval XML target.
+- `reply` continues to decode the full value; test_lv_flat.py covers
+  wrap/unwrap round-trips incl. the raw reply shape.
+
+**Live verification** (bdtest12.vi):
+- unwrap of the real StrArr1 getval reply == lv_getval_hex output.
+- wrap 4,10 + 43.5 -> setval:XML on DigitalNumericConstant WrapTest ->
+  `set: ok`, getval 4045C00000000000, decode = 43.5.
+- **CreateConstFromDataType carries the TYPE ONLY** - the data hex is
+  IGNORED (constant created with default 0.0, re-confirmed twice).
+  Create-with-value = BD Create* (label via arg3) THEN setval:XML on
+  `%DigitalNumericConstant|<label>` - verified: WrapTest2 = 43.5.
+  (Earlier v3.35/v3.41 'value carried' notes all had 0.0 values - not
+  actually proving data transfer.)
+- setval argument ORDER: arg1 = XML value, arg2 = format ('XML') -
+  swapped gives 'Format not known'.
+- lv_frame_names_xml.py now builds its payload via lv_flat.wrap_xml
+  (--check compares case-insensitively; hex case is irrelevant).
