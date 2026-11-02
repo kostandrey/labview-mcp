@@ -201,14 +201,15 @@ any loop/accumulator generation task.
 Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
 "v3 build sheet"):
 
-- **`BD` - block-diagram actions (v3.40, user-built)**: arg1 =
+- **`BD` - block-diagram actions (v3.40/v3.41, user-built)**: arg1 =
   `CleanUp` / `RemWireLooseEnds` (no more args) or
-  `CreateConstFromDataType` (arg2 = XML data type in the setVal:XML
-  format, arg3 = `'x,y,Label'`; returns `UID: <n>`). VERIFIED: the
-  created object's TYPE+VALUE are correct, but **LabVIEW 2020 ignores
-  the method's Position input** - created objects land at a fixed spot;
-  move them afterwards with `GObject.Move` (recipe v3.40).
-  `CreateFromDataType` is NOT implemented ("Error: Methor not known").
+  `CreateConstFromDataType` / `CreateFromDataType` (arg2 = XML data type
+  in the setVal:XML format, arg3 = `'x,y,Label'`; returns `UID: <n>`).
+  VERIFIED: the created object is MOVED to x,y after creation
+  (GObject.Move); x,y are relative to the OWNER's origin when vi_path
+  resolves a structure via `%GObject|<label>` (same as `place`) - use
+  analyze POS/AREA of the loop to pick coordinates. Both Create* verbs
+  produce a BD constant (no FP object).
 - `delete` - remove a GObject/wire: vi_path = container resolver (or
   plain for top-level), arg1 = class ('GObject' = any, 'Wire'), arg2 =
   'U:<uid>' or 'L:<label>'. `analyze`/`wires` print UIDs. NOTE: in batch

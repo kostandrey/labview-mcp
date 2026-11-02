@@ -2874,3 +2874,27 @@ parameter in LV2020.1f1 64-bit. **Workaround: `GObject.Move` (method id
 - Scratch: `gen/testBDVerb.vi` (Add x+y fixture, untracked - user's);
   bdtest*.vi in `_service\tmp`; `gateway\Gateway_Copy.vi` is the user's
   inspection copy (untracked, not committed).
+
+## v3.41 (2026-11-02 later) - Create* Position WORKS now (Move-after-create) + owner-resolved moves: ALL VERIFIED
+
+The user fixed the Create* cases: after `Create From Data Type` the
+created object is moved with `GObject.Move` to the requested position;
+and `vi_path` may resolve an item owner (`%GObject|<structure label>`,
+same mechanism as `place`) - the object is moved INSIDE it. Both
+`CreateConstFromDataType` and `CreateFromDataType` behave identically
+and both now exist (`CreateFromDataType` no longer errors).
+
+**Verified** (testBDVerb.vi and sr_golden.vi copies):
+- Top-level: `BD;<vi>;CreateConstFromDataType;<XML>;300,50,PosOK` ->
+  `DigitalNumericConstant [PosOK] POS: 300,50` (exact).
+- Owner: `BD;<vi>%GObject|L1;CreateFromDataType;<XML>;30,30,CtrlInLoop`
+  on sr_golden.vi (ForLoop L1 at 80,100) -> constant at 111,131 =
+  owner origin + (30,30)+1px border. Position is RELATIVE TO THE
+  OWNER's origin, same convention as `place`. Value carried correctly
+  (InLoop = 0.0 DBL via getval).
+- No FP object is created by either verb (checked analyze arg1='FP') -
+  both produce a BD constant; the two verbs are currently equivalent.
+
+Recipe for dropping nodes into loops without CleanUp surprises:
+resolve the loop as owner and use coordinates relative to its origin
+(read the loop's POS/AREA from analyze first).
