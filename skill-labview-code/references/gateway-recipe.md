@@ -2997,3 +2997,29 @@ User-built frame-structure editors (arg2 is PLAIN text, no quotes):
 
 **server.py**: case descriptions extended (addFrame/delFrame);
 validate 18 tools, 0 invalid - RESTART the MCP server.
+
+## v3.45 (2026-11-02) - setFrameNames payload made deterministic + workflow rules
+
+Reliability pass over the new `case` tools:
+
+- **The I16 type string is FIXED for any 1D string array** - reuse
+  `26,16448,1,-1,-1,8,48,-1,-1,1875,29810,16754,29233`; no getval of a
+  string-array constant needed. (The descriptor's embedded pascal name
+  - here 'StrArr1' - is IGNORED by Variant To Data; proven by the
+  payload working on an unrelated target.) Hex case is irrelevant
+  (lowercase accepted too); the helper emits uppercase.
+- **Helper `mcp-labview/scripts/lv_frame_names_xml.py`**: prints the
+  single-line setFrameNames payload for given names
+  (`python lv_frame_names_xml.py one two three`); `--check` self-tests
+  against the v3.43-verified payload. Verified end-to-end: helper
+  output -> setFrameNames on a fresh bdtest12.vi copy -> `OK`, frames
+  ' "one" / "two" / "three" ', UIDs unchanged.
+- **Workflow rules for frame editing** (put in server.py descriptions):
+  1. getFrames FIRST; frame indices are POSITIONAL and SHIFT after
+     addFrame/delFrame - re-run getFrames before further frame ops.
+  2. After ANY frame mutation run `errors` - deleting/renaming the
+     wrong frames (esp. the Default one, or type-mismatched names)
+     breaks the VI silently otherwise.
+  3. addFrame returns the new frame's Diagram UID - usable immediately
+     with analyze/place/delete resolvers without another getFrames.
+- Scratch: bdtest12.vi (helper verification copy).
