@@ -2968,3 +2968,32 @@ or the case must be string-selected). Check `errors` after renaming.
 
 **server.py**: case arg1/arg2 descriptions extended (setFrameNames);
 validate 18 tools, 0 invalid - RESTART the MCP server.
+
+## v3.44 (2026-11-02) - `case;addFrame` / `case;delFrame` VERIFIED
+
+User-built frame-structure editors (arg2 is PLAIN text, no quotes):
+- `addFrame; <refIdx>,<after 0|1>` - inserts a frame AFTER (after=1)
+  or BEFORE (after=0) frame <refIdx>; the new frame gets the next free
+  numeric name; returns `OK UID: <new frame Diagram UID>` (the UID is
+  the same object getFrames/analyze list inside the structure).
+  Verified: `2,1` -> frame ' 3 ' appended (UID 121); `0,0` -> frame
+  ' 4 ' inserted at index 0 (UID 128).
+- `delFrame; <frameIdx>` (0-based) - deletes that frame, returns `OK`.
+  Verified repeated deletes down to ONE frame; deleting the DEFAULT
+  frame leaves the VI broken ('No case for some selector values') -
+  expected LV semantics; re-designate default via setFrameNames
+  ('X, Default' names round-trip, see v3.43).
+
+**Error paths** (all fail loudly, structure intact):
+- `delFrame;9` (out of range), `delFrame;-1`, `delFrame;0` on the only
+  frame -> `ERROR 1: Invoke Node ... Method Name: Remove Frame`.
+- `addFrame;xyz` (unparseable) -> ERROR 1 (append may name the wrong
+  method - shared error constant); empty arg2 -> `ERROR 1: Scan From
+  String (arg 1)` - arg2 is parsed with %d,%d.
+- Unknown label / constants (e.g. `%GObject|DigitalNumericConstant|x`)
+  -> `Not found` (SelectByLabel); a resolvable non-case GObject gives
+  ERROR 1057 (v3.42).
+- setFrameNames on the 1-frame case (1 name) -> OK (' "last" ').
+
+**server.py**: case descriptions extended (addFrame/delFrame);
+validate 18 tools, 0 invalid - RESTART the MCP server.

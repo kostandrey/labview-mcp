@@ -215,6 +215,13 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   string from a getval of any string-array constant). Count mismatch
   -> ERROR 1302 (no change); string names on a numeric case break the
   VI - check `errors` after renaming.
+  arg1 = `addFrame` (v3.44): arg2 = `<refIdx>,<after 0|1>` (plain);
+  inserts a frame after/before the reference frame, named with the
+  next free number; returns `OK UID: <new frame Diagram UID>`.
+  arg1 = `delFrame` (v3.44): arg2 = 0-based frame index; `OK` on
+  success; refuses to delete the ONLY frame (ERROR 1 Remove Frame);
+  deleting the Default frame breaks the VI (re-designate default via
+  setFrameNames 'X, Default').
 - **`BD` - block-diagram actions (v3.40/v3.41, user-built)**: arg1 =
   `CleanUp` / `RemWireLooseEnds` (no more args) or
   `CreateConstFromDataType` / `CreateFromDataType` (arg2 = XML data type
