@@ -3103,3 +3103,49 @@ a dead end: Bing/DDG/Google/Mojeek all bot-blocked):
 product is EOL - it targeted LV2010-2013). Kept in Gateway.vi +
 server.py enum for documentation; do NOT use it in workflows.
 server.py validate: 18 tools, 0 invalid.
+
+## v3.48 (2026-11-02) - `Build IGL` (TopLvDiag) RESEARCHED: legacy compiler IR, no public docs
+
+User asked about the TopLvDiag Invoke method `Build IGL` ("Converts the
+diagram to LabVIEW intermediate graph language"; flags: private, no
+remote access, must wait UI idle, not in run-time/RT; no Gateway verb
+built). Findings - all from LOCAL LabVIEW resources (web dead again:
+search engines bot-blocked, patents phrase absent, LAVA 0 hits, NI
+forum fuzzy-only):
+
+- **Signature** (lvserver.rsc terminal table): `Option1` (enum in),
+  `Option2` (enum in), `Stubs` (out). The user's context help shows
+  them as Option/BuildIGL/Stubs - enum item names are NOT in the rsc;
+  the IDE shows them instantly (right-click the terminal).
+- **What IGL is**: the intermediate representation of the LEGACY
+  LabVIEW compiler. Evidence: `App.UseDFIR?` property - "True enables
+  the DFIR compiler. **False enables the legacy LabVIEW compiler**";
+  DFIR (DataFlow Intermediate Representation, `dfir_20_0.dll`) is the
+  modern IR with a whole framework (DFIR Transform Framework, DOT-file
+  generation for visualization, App.Compiler.DFIRCompiler property).
+- **Survives to LV2026** (lvserver.rsc 2026 still lists Build IGL with
+  the same doc) - but no public documentation exists anywhere
+  (offline CHM mirror: no; ni.com unreachable; exact phrase absent from
+  Google Patents).
+- **Stubs** output type unknown; "stub" elsewhere in the rsc means PPL
+  stubs (Convert To Stub) - likely unrelated. Probably a string/path
+  or file list of the generated IGL dump.
+
+**The interesting siblings found during the research** (same private
+compiler family, LV2020):
+- `VI:Compile To DFIR CPP` - terminals `VI Variable Name` (string),
+  `Indentation Level`, `CPP Output` (string) - generates C++-LIKE
+  PSEUDOCODE of the VI from its DFIR. Potentially an excellent
+  auto-documentation export for generated VIs (AI-assistant use case!)
+  - NOT yet implemented/verified; a runner is needed (private methods
+  need an invoke node; Gateway self-inspection limits apply).
+- `CompileToDFIRXML` (XMLOutput) - explicitly marked
+  **"(Not Implemented)"** in the rsc - dead, do not chase.
+- `App.Compiler.DFIRCompiler` property, `ReadDFIRTokens` (re-reads
+  LabVIEW.ini compiler tokens).
+
+**Verdict for Build IGL**: not useful for the harness - internal legacy
+IR with unknown output and no consumers. If empirical data is wanted:
+wire Option1/Option2 constants in the IDE (or add a Gateway case:
+arg1=Option1, arg2=Option2, result shows the Stubs repr) - ~10 min.
+The DFIR CPP method is the one worth a verb someday.
