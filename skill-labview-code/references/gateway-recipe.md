@@ -2898,3 +2898,23 @@ and both now exist (`CreateFromDataType` no longer errors).
 Recipe for dropping nodes into loops without CleanUp surprises:
 resolve the loop as owner and use coordinates relative to its origin
 (read the loop's POS/AREA from analyze first).
+
+## v3.42 (2026-11-02 evening) - new `case` verb: getFrames VERIFIED
+
+User-built. `case` + arg1='getFrames': vi_path must resolve a CASE
+STRUCTURE (`<vi>%GObject|<case label>`); returns
+`UID: <struct UID>;Frames: <k>` + one
+`Frame[i]: UID: <diagram UID>; Name: '<case name>'` per frame.
+
+**Verified** on bdtest_demo.vi (user added CaseStructure [myCase],
+3 frames): output matches analyze exactly - frame Diagram UIDs 127/134/
+227 are the same objects analyze lists inside the structure. So
+case getFrames gives the per-frame Diagram UIDs that `place`/`wire`
+resolvers (`%GObject|<case>%Case#|<n>`) and `delete` can target.
+
+**Errors**: vi_path resolving a non-case GObject (e.g. a ForLoop) ->
+`ERROR 1057: To More Specific Class in Gateway.vi`; unknown label ->
+`noSuchCaseNot found` (SelectByLabel).
+
+**server.py**: `case` added to the verb enum with the getFrames spec
+(validate 18 tools, 0 invalid) - RESTART the MCP server.
