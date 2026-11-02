@@ -3192,3 +3192,57 @@ with their connectivity. Constant VALUES visible in the data blob
 (demo constant 3.1 = bytes CD CC CC CC CC CC 08 40 = DBL 0x4008CCCCCCCCCCCCCD
 read little-endian - NOTE: values in TestVI_data appear LITTLE-endian,
 unlike the big-endian getval/setval transport; a parser must mind this).
+
+## v3.50 (2026-11-02) - `lv_dfir.py`: parse CompileToDFIRCPP output into structured JSON
+
+`mcp-labview/scripts/lv_dfir.py` turns the v3.49 C++ dump into a
+human-readable summary and/or machine-readable JSON:
+
+```
+python mcp-labview/scripts/lv_dfir.py <file.cpp>              # summary to stdout
+python mcp-labview/scripts/lv_dfir.py <file.cpp> -o out.json  # + JSON
+python mcp-labview/scripts/lv_dfir.py -                       # stdin (pipe from gateway)
+```
+
+Exit 3 + warning if unparsed statements remain (check `unparsed` list).
+Regenerate dumps with: `cscript //nologo _service/tmp/lv_gw_call.vbs
+"C:\LabView skill\gateway\Gateway.vi" CompileToDFIRCPP <vi> <name> <indent> "" <out.cpp>`
+(7 args REQUIRED - 6 args silently shifts the path into arg3).
+
+**JSON keys**: `vi` (name + path), `data_size`, `diagrams` (tree:
+ref, owner, index), `nodes` (ref, class, uid, diagram, value {type,
+name, value}), `connections` (src/dst node + terminal, wire, tdr),
+`unparsed`. Node classes seen: Constant/Control/Indicator (with decoded
+VALUES from the data blob), ForLoop/CaseStructure/WhileLoop,
+LoopIndex/LoopCondition/LoopMax, Left/RightShiftRegister, Tunnel,
+CaseSelector, Wire, `<Op>Primitive` (Add/Subtract/Divide/Multiply/
+IsLessOrEqual/Select/RandomNumber0To1/...), FeedbackInputNode +
+FeedbackOutputNode (feedback loops), and **SubVI** for subVI calls.
+
+**SubVI calls are fully recoverable (verified on a caller VI with an
+unwired sr_golden node)**: the call node exports as `DFIR::SubVI` with
+its analyze UID, and the Create call embeds the callee path:
+`DFIR::SubVI::Create(diagramRef_1, MakeTDR(...), LinkIdentity(&PathRef(
+"C:\\...\\sr_golden.vi", PathRef::kStringDisplay), NULL/*context*/));`
+-> a call graph can be built by grepping the dumps for `DFIR::SubVI`
++ PathRef; each callee then gets its own dump (leaf-first).
+
+**Data blob format decoded (verified on sr_golden + bdtest_demo)**:
+blob text = C octal escapes. Each `MakeValue(data, off, len, rep)`
+window = `[I32 1][I16 blocklen][I16 typecode LE, |0x4000 if named][00]
+[pascal name][pad]`, and the VALUE = `blob[off+len : off+len+rep]` in
+**LITTLE-endian** (followed by a big-endian copy - parser uses the LE
+one). `MakeTDR(data, off, len)` = same window, no value bytes (wire /
+terminal types). typecodes = lv_flat SCALARS codes (0x0A=DBL, 0x03=I32,
+0x21=BOOL, ...). Verified values: sr_golden N5=5 (I32), bdtest_demo
+constant 3.1 (DBL, label 'x'), controls 0.0, Numeric I32 0.
+
+**UID note**: structure/primitive UIDs match analyze/getFrames UIDs
+exactly (case 82, Add 43, Subtract 274, Divide 325); FP-terminal nodes
+differ slightly (DFIR 75/99/156/165 vs analyze 63/101/158/167 - the
+DFIR ids are the terminal/constant objects, analyze ids are the FP
+element objects). Don't mix the two id spaces in scripts.
+
+Regression: `python mcp-labview/scripts/lv_dfir.py _service/tmp/bdtest_demo.cpp`
+-> constant 3.1 DBL 'x', case frames 0/1/2 owned by caseStructureRef_6,
+29 connections, rc=0, zero unparsed.

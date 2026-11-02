@@ -248,6 +248,17 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   Requires the discontinued NI LabVIEW C Code Generator module - not
   installed -> every call returns ERROR 1043. Do not use; documented
   in recipe v3.47.
+- **`CompileToDFIRCPP` (v3.49/v3.50, user-built, VERIFIED)**: exports
+  the VI block diagram as a complete C++ program in NI's internal
+  DFIR::TestUtil format that RECONSTRUCTS the VI (semantic BD dump:
+  nodes with SetSourceID UIDs, constant VALUES in the data blob, nested
+  diagrams, connections). Requires a CLEAN/COMPILABLE VI (broken ->
+  ERROR 1000). arg1 = C identifier prefix, arg2 = indentation level.
+  Parse the result into structured JSON with
+  `python mcp-labview/scripts/lv_dfir.py <file.cpp> [-o out.json]`
+  (recipe v3.50). Best semantic export for VI documentation, diffing
+  and porting LabVIEW code to other languages
+  (see references/porting-labview-project.md).
 - `delete` - remove a GObject/wire: vi_path = container resolver (or
   plain for top-level), arg1 = class ('GObject' = any, 'Wire'), arg2 =
   'U:<uid>' or 'L:<label>'. `analyze`/`wires` print UIDs. NOTE: in batch
