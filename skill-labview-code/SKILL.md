@@ -201,13 +201,20 @@ any loop/accumulator generation task.
 Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
 "v3 build sheet"):
 
-- **`case` - case-structure info (v3.42, user-built)**: arg1 =
+- **`case` - case-structure info + frame rename (v3.42/v3.43, user-built)**: arg1 =
   `getFrames`, vi_path resolves the case (`<vi>%GObject|<case label>`);
   returns `UID: <n>;Frames: <k>` + `Frame[i]: UID: <diagram UID>;
   Name: '<name>'` per frame. Frame Diagram UIDs are the objects
   analyze lists inside the structure - target them with the
   `%GObject|<case>%Case#|<n>` place resolver or `delete`. Non-case
   GObject -> ERROR 1057; unknown label -> 'Not found'.
+  arg1 = `setFrameNames` (v3.43): arg2 = XML in the EXACT getval-reply
+  envelope for a 1D string array (Array first with per-element
+  `<I16><Name></Name><Val>` tags + `<Dimsize>`, String last with
+  big-endian `I32 count + (I32 len + ASCII)` hex; copy the I16 type
+  string from a getval of any string-array constant). Count mismatch
+  -> ERROR 1302 (no change); string names on a numeric case break the
+  VI - check `errors` after renaming.
 - **`BD` - block-diagram actions (v3.40/v3.41, user-built)**: arg1 =
   `CleanUp` / `RemWireLooseEnds` (no more args) or
   `CreateConstFromDataType` / `CreateFromDataType` (arg2 = XML data type

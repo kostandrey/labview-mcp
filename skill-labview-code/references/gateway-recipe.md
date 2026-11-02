@@ -2918,3 +2918,53 @@ resolvers (`%GObject|<case>%Case#|<n>`) and `delete` can target.
 
 **server.py**: `case` added to the verb enum with the getFrames spec
 (validate 18 tools, 0 invalid) - RESTART the MCP server.
+
+## v3.43 (2026-11-02) - `case;setFrameNames` VERIFIED (payload = exact getval-reply envelope)
+
+User-built write method: renames all frames of a case structure.
+`case; <vi>%GObject|<caseLabel>; setFrameNames; <XML>`; gateway saves.
+
+**XML payload** (the hard-won part - two wrong formats failed before
+this one worked): an EXACT replica of the gateway getval reply for a
+1D string array:
+- `<Cluster><Name></Name><NumElts>2</NumElts>` ... `</Cluster>`
+- Array FIRST, String LAST (matching the getval reply order):
+  `<Array><Name>type string</Name><Dimsize>13</Dimsize>` + one
+  `<I16><Name></Name><Val>v</Val></I16>` PER element (NOT one I16
+  wrapper with many Val children - Unflatten From XML rejects that).
+- The I16 type string is just copied from a getval of any 1D string
+  array constant (e.g. placed ArrayConstant shell + `lv_getval_hex.vbs`);
+  it decodes as {ndims=1, elem=string}. The embedded pascal name is
+  ignored by Variant To Data.
+- Data hex in the String Val = BIG-ENDIAN flattened string array:
+  `I32 count` + per name `I32 length + ASCII bytes`.
+  low/mid/high = `00000003 00000003 6C6F77 00000003 6D6964
+  00000004 68696768`.
+
+**How the format was found**: `extract_vi gateway\XML_to_Variant.vi`
++ `wires` on the extract copy - arg1 -> Unflatten From XML (type =
+cluster constant {String, I16[] 'type string'}), the String goes
+through a Scan-From-String '%2s' loop (hex pairs -> bytes) and the
+I16 array is the type string -> Flattened String To Variant. The raw
+getval reply (dumped with a 15-line VBS, `_service\tmp\rawgetval.vbs`)
+then served as the byte-exact template.
+
+**Verified** on `_service\tmp\bdtest10.vi` (copy of bdtest_demo.vi):
+- setFrameNames low/mid/high -> `OK`; getFrames shows
+  `' "low" '`, `' "mid" '`, `' "high" '` (string-case display adds
+  quotes), Diagram UIDs 127/134/227 unchanged.
+- Count mismatch (2 names on 3 frames) -> `ERROR 1302: Property Node
+  (arg 1) ... Property Name: Frame Names` - frames unchanged.
+- Malformed hex (len/byte mismatch) -> `ERROR 74: Flattened String To
+  Variant` - fails loudly, good.
+- Round-trip: setting the original numeric names back (' 0, Default ',
+  '1', '2') -> `OK` and `errors` EMPTY again.
+
+**GOTCHA - selector type**: setting STRING names on a numerically-
+selected case leaves the VI BROKEN ('Selector values have wrong
+type' + 'No case for some selector values') - names must be valid for
+the case selector's type (numeric selector -> numeric-looking names,
+or the case must be string-selected). Check `errors` after renaming.
+
+**server.py**: case arg1/arg2 descriptions extended (setFrameNames);
+validate 18 tools, 0 invalid - RESTART the MCP server.
