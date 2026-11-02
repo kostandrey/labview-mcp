@@ -3149,3 +3149,35 @@ IR with unknown output and no consumers. If empirical data is wanted:
 wire Option1/Option2 constants in the IDE (or add a Gateway case:
 arg1=Option1, arg2=Option2, result shows the Stubs repr) - ~10 min.
 The DFIR CPP method is the one worth a verb someday.
+
+## v3.49 (2026-11-02) - `CompileToDFIRCPP` verb VERIFIED: VI -> C++ DFIR reconstruction program
+
+User implemented the VI-class method `Compile:Compile To DFIR CPP`:
+arg1 -> `VIVariableName` (C identifier prefix), arg2 ->
+`IndentationLevel` (int, tabs added to every line), `CPP Output` ->
+result. VERIFIED on `_service\tmp\dfirtest2.vi` (sr_golden.vi copy):
+
+- Result = a COMPLETE C++ program that reconstructs the VI through the
+  internal `DFIR::TestUtil` API: `const char TestVI_data[]` (flattened
+  type+data blobs for all controls/indicators/constants - the actual
+  VALUES are in there), `DFIR::VirtualInstrument::Create(...PathRef(...vi path...)...)`,
+  Control/Indicator/Constant/ForLoop/ShiftRegister/Primitive `::Create`
+  calls with SetSourceID(<UID>!), nested diagrams, Wire::Create +
+  `NodeConnectionSpecification` connectivity blocks (source terminal
+  index, wire, sink terminal index, type ref). Essentially a machine-
+  readable SEMANTIC dump of the whole BD - including constant values
+  (decode the MakeValue/MakeTDR offsets with lv_flat) and node UIDs.
+- IndentationLevel=0 vs 1: adds that many extra tabs per line (the
+  data-string lines keep their internal 4-tab base indent).
+- **Requires a CLEAN, COMPILABLE VI**: on the broken demo.vi copy
+  -> `ERROR 1000: The VI is not in a state compatible with this
+  operation` (that VI has an unwired SR + unwired N; errors verb
+  confirms). Broken/uncompilable VIs have no DFIR to dump.
+- Read verb - does not modify the target.
+
+**Harness value**: semantic BD export for documentation, VI diffing
+and programmatic wiring checks (SetSourceID = object UID, matching
+analyze/wires UIDs). Suggested future use: after generating a VI, run
+CompileToDFIRCPP + parse to verify the structure matches intent.
+
+server.py: verb added to the enum (validate 18 tools, 0 invalid).
