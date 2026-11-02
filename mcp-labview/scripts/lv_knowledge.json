@@ -63,7 +63,9 @@
     "1092": "Traverse Initialization Failed - wrong resolver CLASS name",
     "1093": "delete failed for that UID - use the UID from the wires verb output",
     "1061": "New VI Object cannot place this (e.g. Error Ring Constant - dialog-configured node)",
-    "74": "Flattened String To Variant - type string / data mismatch in setval XML"
+    "74": "Flattened String To Variant - type string / data mismatch in setval XML",
+    "1043": "The property or method is not supported in this version of LabVIEW - e.g. GenCCodeVariant without the (discontinued) C Code Generator module",
+    "1102/1105/1106": "Unflatten From XML in XML_to_Variant.vi - payload is not valid LVXML or does not match the wired type"
   },
   "place_result": {
     "format": "place ok type=<type> label=<label> at <x,y[,W,H]> UID=<n> - NO owner/nesting info",

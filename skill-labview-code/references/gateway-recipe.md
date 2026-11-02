@@ -3056,3 +3056,50 @@ a reusable converter in lv_flat.py (all under mcp-labview/scripts/):
   swapped gives 'Format not known'.
 - lv_frame_names_xml.py now builds its payload via lv_flat.wrap_xml
   (--check compares case-insensitively; hex case is irrelevant).
+
+## v3.47 (2026-11-02) - new user-built `GenCCodeVariant` verb RESEARCHED: unusable (module never installed)
+
+User added verb `GenCCodeVariant` (case label "GenCCodeVariant"):
+vi_path -> ReferenceResolver -> VI ref -> Invoke `Generate C Code Variant`
+with `arg1` (NOT arg2) -> XML_to_Variant -> `configParams`. Invoke
+terminals (ground truth from `wires` on a Gateway copy): `fileList`
+(1D string, tab-sheet in result), `Error List` (2D string),
+`Warning List` (bool, printed 0/1), `Node ID List` (2D numeric).
+
+**What the method is** (all from local LabVIEW resources - the web was
+a dead end: Bing/DDG/Google/Mojeek all bot-blocked):
+- `lvserver.rsc` method doc: "This method generates C code from the VI
+  and all its subVIs." Config Params doc: "Contains the code generation
+  attributes (name, value pairs) that determine how the LabVIEW C Code
+  Generator generates the C code from the block diagram. Any attributes
+  you do not set use the default behavior."
+- Owner product: **NI LabVIEW C Code Generator** (a.k.a. NI LabVIEW C
+  Generator) - a discontinued add-on module, not core LabVIEW.
+- Attribute NAMES visible in lvserver.rsc strings:
+  `C Code Generation:Generate Guard Code / Generate Serial Only /
+  Generate Integer Only / Generate C Function Calls / Use Stack
+  Variables / Expression Folding / Inline SubVI`. Companion help strings
+  explain: guard code = cooperative-multitasking removal, integer only
+  = no floating-point, stack variables = better compiler optimization.
+- The exact Config Params variant TYPE is undocumented; plausible
+  shapes: 1D array of cluster {name: String, value: String/Variant} or
+  2D string array. Determining it would need the module's own VIs.
+
+**Empirical** (scratch `_service\tmp\ccgtest.vi` = demo.vi copy):
+- empty arg1 -> `ERROR 1102: Unflatten From XML in XML_to_Variant.vi`
+  (arg1 must be a valid lv_flat-wrap XML envelope).
+- valid 2D-string-array config -> `ERROR 1043: Invoke Node ... Method
+  Name: Generate C Code Variant`. Error 1043 = "The property or method
+  is not supported in this version of LabVIEW" (LabVIEW-errors.txt).
+- Same 1043 with any config -> the C Generator backend is MISSING.
+  Verified: no nilvccg.dll / CCodeGen dirs in LV2020 x86, LV2020 x64,
+  LV2026 x64; no registry component; only vestigial
+  `vi.lib\AppBuilder\AB_Source_Property_CCodeGen*.ctl` (empty enum).
+  The MAX\Assistants\LVCGen folder is unrelated (MAX mxw* VIs).
+- NI KB (user-provided) confirms 1043 semantics: thrown for scripting
+  methods not supported by the installed LabVIEW/runtime.
+
+**Verdict**: the verb can never succeed on this machine (and the
+product is EOL - it targeted LV2010-2013). Kept in Gateway.vi +
+server.py enum for documentation; do NOT use it in workflows.
+server.py validate: 18 tools, 0 invalid.

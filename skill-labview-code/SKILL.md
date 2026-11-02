@@ -242,6 +242,12 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   constant of the wanted type). `lv_flat.py unwrap <file>` is the
   inverse (raw getval reply -> TYPE=/DATA_HEX=) - use to copy a value
   getval -> unwrap -> setval. lv_frame_names_xml.py builds on wrap.
+- **`GenCCodeVariant` (v3.47, user-built, UNUSABLE)**: generates C code
+  from the VI hierarchy via the VI:Generate C Code Variant method
+  (arg1 = XML envelope with Config Params name/value attributes).
+  Requires the discontinued NI LabVIEW C Code Generator module - not
+  installed -> every call returns ERROR 1043. Do not use; documented
+  in recipe v3.47.
 - `delete` - remove a GObject/wire: vi_path = container resolver (or
   plain for top-level), arg1 = class ('GObject' = any, 'Wire'), arg2 =
   'U:<uid>' or 'L:<label>'. `analyze`/`wires` print UIDs. NOTE: in batch
