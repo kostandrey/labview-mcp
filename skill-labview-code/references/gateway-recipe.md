@@ -3246,3 +3246,57 @@ element objects). Don't mix the two id spaces in scripts.
 Regression: `python mcp-labview/scripts/lv_dfir.py _service/tmp/bdtest_demo.cpp`
 -> constant 3.1 DBL 'x', case frames 0/1/2 owned by caseStructureRef_6,
 29 connections, rc=0, zero unparsed.
+
+## v3.51 (2026-11-03) - `dfir2cpp_cleaner.py`: token-efficient normalizer for LLM prompts
+
+Per the user's spec "Post-Processing Pipeline for LabVIEW
+CompileDFIRCPP Output" v1.0.0: raw dumps in LLM prompts waste context
+and cause hallucinations about NI internals. New tool
+`mcp-labview/scripts/dfir2cpp_cleaner.py` (v1.0.0, stdlib-only,
+deterministic, Approach-A multi-pass regex):
+
+```
+python mcp-labview/scripts/dfir2cpp_cleaner.py IN.cpp [-o OUT.cpp]
+    [--dialect auto|dfir-testutil|lvcc] [--json report.json]
+    [--keep-types Name1,Name2] [--keep-blobs] [--quiet]
+```
+
+**Dialect-aware** (spec FRs were written against the classic
+C-Code-Generator dialect - extcode.h/MgErr/arrHandle - which our
+CompileToDFIRCPP does NOT emit; our dumps are the DFIR::TestUtil
+dialect; verified zero occurrences of extcode/MgErr/NumericArrayResize
+in all fixtures):
+
+- `dfir-testutil` (our dumps): T1 strips `const char X_data[]` blobs,
+  T2 decodes `MakeValue(blob,off,len,rep)` -> plain literal with
+  `/*TYPE 'name'*/` comment (reuses lv_dfir decode_window; adds BOOL/U8),
+  T3 `MakeTDR` -> `dfir_type("DBL 'Num1'")` (empty TDR code 0 ->
+  `dfir_type("")`), T4 `LinkIdentity(&PathRef(...), NULL/*context*/)` ->
+  `path("...")`, T5 `X.SetSourceID(n);` -> `// uid=n (X)` comment, T6
+  `connectivityVec.push_back(NodeConnectionSpecification(ARGS));` ->
+  `connect(ARGS);` + drops vector/ConnectNodes boilerplate, T7 strips
+  the `DFIR::TestUtil::` namespace.
+- `lvcc` (spec dialect): FR-1.1 NI headers, FR-1.2 pragmas/LV_UNUSED,
+  FR-2.1 alias->stdint map (+ptrdiff_t), FR-2.2 `_Hdl` strip with
+  `--keep-types`, FR-3.1 NumericArrayResize/DSSetHandleSize/
+  SetHandleSize/AZCheck statement removal (balanced-paren scan),
+  FR-3.2 MgErr decls/error-gotos/cleanup-label, `return err` ->
+  `return mgNoErr`, FR-4.2 linearized 2D `elt[i*dimSizes[1]+j]` ->
+  `arr[i][j]` (BEFORE 4.1/4.3), FR-4.1 `(**h)->elt[i]` -> `h[i]`,
+  FR-4.3 `dimSizes[0]`->`.size()`, `[1]`->`.size(1)`, FR-5.1 single-pass
+  clump switch unwrap, FR-5.2 conservative single-use wire inlining
+  (SSA heuristic, max 5 fixpoint rounds).
+
+**Verified** (test_dfir2cpp_cleaner.py, all checks pass): 4 real dumps
+(sr_golden/bdtest_demo/pi_golden3/caller2) -> 0 NI-macro remnants,
+balanced parens, byte-identical re-runs; synthetic lvcc fixture -> all
+FRs fire (-48.7% words); pi_golden3 141 ms (< 250 ms NFR); values
+decoded (pi_golden3: `1000000/*I32 'NConst'*/`). JSON report carries
+dialect, per-pass counts, warnings, words/bytes before/after and
+output sha256.
+
+Gotcha that cost 3 fixes: the `LinkIdentity` group must END with
+PathRef's escaped `\)` INSIDE the group (`...PathRef::\w+\)`) with the
+raw `)` closing the group AFTER it - `\w+))` vs `\w+)\)` vs `\w+\)\)`
+are three different (wrong) patterns; patch regexes programmatically
+and assert `re.compile` before writing.

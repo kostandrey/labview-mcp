@@ -259,6 +259,14 @@ Gateway v3 verbs (build sheet in `references/gateway-recipe.md`, section
   (recipe v3.50). Best semantic export for VI documentation, diffing
   and porting LabVIEW code to other languages
   (see references/porting-labview-project.md).
+- **`dfir2cpp_cleaner.py` (v3.51, VERIFIED)**: normalizes raw
+  CompileToDFIRCPP C++ (or LVCC-style output) into token-efficient,
+  NI-macro-free C++ for LLM prompts / C++20 porting: decodes
+  MakeValue/MakeTDR to literals, `connect(...)` compaction,
+  `_data[]` blob strip, type/alias/error-handling/array-descriptor
+  normalization (spec FR-1.1..5.2). Deterministic, stdlib-only,
+  graceful fallback. Regression: `python
+  mcp-labview/scripts/test_dfir2cpp_cleaner.py`.
 - `delete` - remove a GObject/wire: vi_path = container resolver (or
   plain for top-level), arg1 = class ('GObject' = any, 'Wire'), arg2 =
   'U:<uid>' or 'L:<label>'. `analyze`/`wires` print UIDs. NOTE: in batch

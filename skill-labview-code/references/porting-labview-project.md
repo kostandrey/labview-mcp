@@ -153,6 +153,7 @@ Rules learned from DFIR dumps:
 - Regenerate a dump (7 args!):
   `cscript //nologo _service/tmp/lv_gw_call.vbs "C:\LabView skill\gateway\Gateway.vi" CompileToDFIRCPP <vi> <name> <indent> "" <out.cpp>`
 - Parse to JSON: `python mcp-labview/scripts/lv_dfir.py <out.cpp> -o <out>.json`
+- Normalize for LLM prompts / porting: `python mcp-labview/scripts/dfir2cpp_cleaner.py <out.cpp> -o <clean>.cpp` (recipe v3.51)
 - Fixtures/regressions: `_service/tmp/sr_golden.cpp|.json`,
   `_service/tmp/bdtest_demo.cpp|.json` (case-structure coverage),
   `_service/tmp/pi_golden3.cpp` (feedback nodes, Select, comparison +
