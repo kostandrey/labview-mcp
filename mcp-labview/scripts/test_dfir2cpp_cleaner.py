@@ -87,7 +87,8 @@ check('unknown flagged', rep4['dialect'], 'unknown')
 
 TMP = os.path.join('..', '..', '_service', 'tmp')
 if os.path.isdir(TMP):
-    for name in ('sr_golden', 'bdtest_demo', 'pi_golden3', 'caller2'):
+    for name in ('sr_golden', 'bdtest_demo', 'pi_golden3', 'caller2',
+                 'crc16'):
         p = os.path.join(TMP, name + '.cpp')
         if not os.path.isfile(p):
             continue
@@ -112,6 +113,14 @@ if os.path.isfile(sr):
     check('decoded I32 literal', "5/*I32 'N5'*/" in out, True)
     check('decoded DBL control', "0.0/*DBL 'Num1'*/" in out, True)
     check('connect pass', 'connect(&controlRef_2, 0' in out, True)
+
+crc = os.path.join(TMP, 'crc16.cpp')
+if os.path.isfile(crc):
+    out, _ = dc.clean(open(crc, encoding='utf-8',
+                           errors='surrogateescape').read())
+    check('crc16 FFFF decoded', "65535/*U16 'FFFF(U16)'*/" in out, True)
+    check('crc16 empty string', '""/*String*/' in out, True)
+    check('crc16 no blob', 'CRC16_data' in out, False)
 
 if fails:
     print('FAILED %d checks:' % len(fails))

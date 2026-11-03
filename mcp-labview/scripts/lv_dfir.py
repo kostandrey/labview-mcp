@@ -30,7 +30,7 @@ import sys
 
 CODE_NAMES = {0x01: 'I8', 0x02: 'I16', 0x03: 'I32', 0x04: 'I64',
               0x05: 'U8', 0x06: 'U16', 0x07: 'U32', 0x08: 'U64',
-              0x09: 'SGL', 0x0A: 'DBL', 0x21: 'BOOL'}
+              0x09: 'SGL', 0x0A: 'DBL', 0x21: 'BOOL', 0x30: 'String'}
 
 BLOBS = {}  # blob_name -> bytes (per section, registered before parsing)
 
@@ -74,20 +74,35 @@ def decode_window(blob, off, ln):
 
 
 def decode_value(blob, off, ln, rep):
-    """Value bytes live at blob[off+ln : off+ln+rep], LITTLE-endian."""
+    """Value bytes live at blob[off+ln : off+ln+rep], LITTLE-endian.
+    String (0x30): rep window = [I32 length][chars...]."""
     code, name = decode_window(blob, off, ln)
     raw = blob[off + ln:off + ln + rep]
     val = raw.hex()
     if code == 0x0A and len(raw) == 8:
         val = struct.unpack('<d', raw)[0]
+    elif code == 0x09 and len(raw) == 4:
+        val = struct.unpack('<f', raw)[0]
     elif code == 0x03 and len(raw) == 4:
         val = struct.unpack('<i', raw)[0]
     elif code == 0x04 and len(raw) == 8:
         val = struct.unpack('<q', raw)[0]
     elif code == 0x02 and len(raw) == 2:
         val = struct.unpack('<h', raw)[0]
-    elif code == 0x09 and len(raw) == 4:
-        val = struct.unpack('<f', raw)[0]
+    elif code == 0x01 and len(raw) == 1:
+        val = struct.unpack('<b', raw)[0]
+    elif code == 0x05 and len(raw) == 1:
+        val = raw[0]
+    elif code == 0x06 and len(raw) == 2:
+        val = struct.unpack('<H', raw)[0]
+    elif code == 0x07 and len(raw) == 4:
+        val = struct.unpack('<I', raw)[0]
+    elif code == 0x08 and len(raw) == 8:
+        val = struct.unpack('<Q', raw)[0]
+    elif code == 0x30 and len(raw) >= 4:
+        n = struct.unpack_from('<i', raw, 0)[0]
+        if 0 <= n <= len(blob) - off - ln - 4:
+            val = blob[off + ln + 4:off + ln + 4 + n].decode('latin1')
     return {'type': CODE_NAMES.get(code, '0x%02X' % code), 'name': name,
             'value': val}
 

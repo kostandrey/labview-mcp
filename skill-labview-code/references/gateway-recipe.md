@@ -3300,3 +3300,15 @@ PathRef's escaped `\)` INSIDE the group (`...PathRef::\w+\)`) with the
 raw `)` closing the group AFTER it - `\w+))` vs `\w+)\)` vs `\w+\)\)`
 are three different (wrong) patterns; patch regexes programmatically
 and assert `re.compile` before writing.
+
+**v3.51.1 (2026-11-03, CRC-16.vi conversion)**: first real-world
+conversion (UFS Commons CRC-16.vi, 23.6 KB dump) exposed missing type
+codes - added to BOTH lv_dfir (CODE_NAMES + decode_value) and the
+cleaner (INT_CODES + string branch): I8/U8/U16/U32/U64 explicit,
+String 0x30 (rep window = [I32 len][chars...], chars may exceed rep;
+empty default = 0-length). All 17 previously-undecoded windows now
+decode; blob fully stripped. Regression checks added for the crc16
+fixture (test auto-skips if `_service/tmp/crc16.cpp` absent). Verified
+semantic recovery: CRC-16/MODBUS (poly 0xA001 = 40961, init 0xFFFF,
+RotateRightWithCarry + conditional XOR, 8 bit-iterations inner loop,
+byte-wise outer loop with U16 SR).

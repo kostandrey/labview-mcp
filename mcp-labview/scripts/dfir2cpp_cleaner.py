@@ -93,25 +93,36 @@ def parse_blobs(text, rep):
     return blobs, out
 
 
+INT_CODES = {0x01: ('b', 1, 'I8'), 0x02: ('h', 2, 'I16'), 0x03: ('i', 4, 'I32'),
+             0x04: ('q', 8, 'I64'), 0x05: ('B', 1, 'U8'), 0x06: ('H', 2, 'U16'),
+             0x07: ('I', 4, 'U32'), 0x08: ('Q', 8, 'U64')}
+
+
+def cpp_escape(s):
+    return ''.join(c if 32 <= ord(c) < 127 else '\\x%02X' % ord(c)
+                   for c in s)
+
+
 def decode_literal(blob, off, ln, rep_bytes):
     """Decode a MakeValue window -> (cpp_literal, type_str, name) or None.
-    Extends lv_dfir.decode_value with BOOL (0x21) support."""
+    Extends lv_dfir.decode_value with BOOL (0x21) and String (0x30)."""
     code, name = lv_dfir.decode_window(blob, off, ln)
     raw = blob[off + ln:off + ln + rep_bytes]
     if code == 0x0A and len(raw) == 8:
         return struct.unpack('<d', raw)[0], 'DBL', name
     if code == 0x09 and len(raw) == 4:
         return struct.unpack('<f', raw)[0], 'SGL', name
-    if code == 0x03 and len(raw) == 4:
-        return struct.unpack('<i', raw)[0], 'I32', name
-    if code == 0x04 and len(raw) == 8:
-        return struct.unpack('<q', raw)[0], 'I64', name
-    if code == 0x02 and len(raw) == 2:
-        return struct.unpack('<h', raw)[0], 'I16', name
+    if code in INT_CODES:
+        fmt, size, tname = INT_CODES[code]
+        if len(raw) == size:
+            return struct.unpack('<' + fmt, raw)[0], tname, name
     if code == 0x21 and len(raw) == 1:
         return (raw[0] != 0), 'BOOL', name
-    if len(raw) == 1:
-        return raw[0], 'U8', name
+    if code == 0x30 and len(raw) >= 4:  # string: [I32 len][chars...]
+        n = struct.unpack_from('<i', raw, 0)[0]
+        if 0 <= n <= len(blob) - off - ln - 4:
+            s = blob[off + ln + 4:off + ln + 4 + n].decode('latin1')
+            return s, 'String', name
     return None
 
 
@@ -133,7 +144,9 @@ def pass_make_value(text, blobs, rep):
             failed.append(m.group(0))
             return m.group(0)
         val, tname, name = dec
-        if isinstance(val, float):
+        if tname == 'String':
+            lit = '"%s"' % cpp_escape(val)
+        elif isinstance(val, float):
             lit = repr(val)  # shortest round-trip repr; deterministic
         elif tname == 'BOOL':
             lit = 'true' if val else 'false'
