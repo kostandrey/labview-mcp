@@ -3356,3 +3356,40 @@ working host for the private method. Gateway.vi already is that
 wrapper; alternatives (lva Scripting Server workers) are equivalent.
 LabVIEW.exe exports (2486) contain no DFIR-CPP symbols; its method
 dispatch lives in `resource\lvserver.rsc` + internal tables.
+
+## v3.53 (2026-11-03) - Complete VI -> clean C++/Python pipeline; make_port_prompt.py
+
+The user's pipeline is now complete and VERIFIED end-to-end on
+CRC-16.vi:
+
+```
+VI --CompileToDFIRCPP--> raw.cpp --dfir2cpp_cleaner--> clean.cpp
+   --make_port_prompt.py--> prompt.md --> LLM --> clean C++20 / Python
+                                              | golden-vector check
+```
+
+`mcp-labview/scripts/make_port_prompt.py` (stdlib-only, deterministic)
+assembles the stage-4 LLM prompt: DFIR-convention dictionary (anti-
+hallucination), 3-step task (essence -> step-by-step explanation ->
+rewrite with std::vector/std::span/<algorithm>/<numeric>, zero NI
+boilerplate; --lang cpp|py|both), output contract (no NI headers,
+deterministic, labels as names, uid comments kept, ask-don't-guess)
+and optional --golden JSON of live-captured vectors.
+
+**Golden vectors are captured from the ORIGINAL VI via arrread cycle**
+(set input control -> read output indicator; CRC-16.vi: `String`
+control, `CRC-16` string indicator = 2 raw LE bytes). Captured:
+""->0xFFFF, "123456789"->0x4B37 (canonical MODBUS check value!),
+"A"->0x707F, "Arduino"->0x4297.
+
+**Validation**: python reference + clean C++20 port
+(`crc16_modbus(std::span<const std::byte>)`) compiled with
+`g++ -std=c++20` - all 4 vectors pass; recovered algorithm =
+CRC-16/MODBUS (poly 0xA001, init 0xFFFF, 8x rotate-right +
+conditional XOR). Artifacts next to the VI: CRC-16.cpp (cleaned),
+CRC-16_port_prompt.md (assembled prompt); _service/tmp/crc16_port.cpp
++ .exe (reference port + run).
+
+Gotchas: str.format on a template that embeds C++ code must NOT
+include the code (braces -> KeyError) - format the head, append the
+fenced code; literal `{ }` in template text needs `{{ }}`.

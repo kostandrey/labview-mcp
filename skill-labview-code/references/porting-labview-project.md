@@ -70,6 +70,36 @@ own dump is a separate CompileToDFIRCPP run on its file.
 
 ### 4. Translate
 
+**Stage 4 - LLM rewrite prompt (recipe v3.53, `make_port_prompt.py`)**:
+the cleaned dump alone is not what you feed the LLM - it still speaks
+the DFIR dialect. `make_port_prompt.py` wraps it into a self-contained
+prompt that (a) provides a DICTIONARY of the remaining conventions
+(`connect(...)`, `dfir_type`, `/*TYPE 'label'*/` literals, uid
+comments, tunnel/SR/case semantics) - this is the anti-hallucination
+layer; (b) asks for the algorithm essence + step-by-step explanation +
+the clean C++20 (`std::vector`/`std::span`/`<algorithm>`/`<numeric>`,
+no memory boilerplate) and/or Python 3.10+ port; (c) embeds GOLDEN
+VECTORS captured live from the VI (arrread cycle) for self-check.
+
+Full pipeline per VI:
+
+```
+cscript ... Gateway.vi CompileToDFIRCPP <vi> <Name> 0 "" <raw.cpp>
+python mcp-labview/scripts/dfir2cpp_cleaner.py <raw.cpp> -o <clean.cpp>
+# capture golden vectors: arrread cycle on the original VI, save JSON:
+#   [{"input": "...", "expect": "0x...."}, ...]
+python mcp-labview/scripts/make_port_prompt.py <clean.cpp> \
+    --vi <vi> --golden vectors.json [--lang cpp|py|both] -o prompt.md
+# -> prompt.md into any LLM; validate its output against vectors
+#    (compile with g++ -std=c++20 and run, or import the py module)
+```
+
+Worked example (CRC-16.vi): golden vectors captured live
+(``->0xFFFF, 123456789->0x4B37, A->0x707F, Arduino->0x4297);
+the reference clean C++20 port (crc16_modbus(std::span<const std::byte>),
+uint16_t state 0xFFFF, 8x rotate-right + conditional XOR 0xA001)
+compiled with g++ -std=c++20 and passed all four vectors.
+
 Map DFIR JSON to the target language. Verified correspondences:
 
 | DFIR class | C++ | Python |
