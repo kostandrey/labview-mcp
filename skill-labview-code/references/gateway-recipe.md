@@ -3312,3 +3312,47 @@ fixture (test auto-skips if `_service/tmp/crc16.cpp` absent). Verified
 semantic recovery: CRC-16/MODBUS (poly 0xA001 = 40961, init 0xFFFF,
 RotateRightWithCarry + conditional XOR, 8 bit-iterations inner loop,
 byte-wise outer loop with U16 SR).
+
+## v3.52 (2026-11-03) - Can CompileToDFIRCPP be called WITHOUT LabVIEW? No (verified)
+
+Question: the method is "likely called as a labviewv.dll method
+internally" - can we call it directly from a DLL and drop Gateway.vi?
+Answer: **NO** - all four candidate routes disproven empirically
+(probe scripts in `_service/tmp/probe_*.py`):
+
+1. **There is no labviewv.dll**: `cintools\labviewv.lib` is the IMPORT
+   LIBRARY for LabVIEW.exe's 2486 exports (both 32/64-bit installs).
+   Its DFIR/Compile symbols are only FPGA/modgen/NCG internals
+   (NCGCompile, FpgaShouldGenerateDFIR, MakeTDRFromDSTM, ...).
+2. **The real emitter exists but is unreachable**:
+   `?GenerateTestCaseCPPContent@DFIR@@YA?AV?$basic_string@...@@std@@
+   AEBVVirtualInstrument@1@AEBV23@J@Z` =
+   `std::string DFIR::GenerateTestCaseCPPContent(
+      const DFIR::VirtualInstrument&, const std::string& /*name*/,
+      long /*indent*/)` is EXPORTED from `resource\dfir_20_0.dll`
+   (32+64-bit) - matching Gateway's arg1/arg2 exactly. BUT:
+   - ctypes LoadLibrary of dfir_20_0.dll outside LabVIEW ->
+     **WinError 1114 (DllMain failed)** - the DLL requires the LV
+     manager context, cannot even be loaded standalone.
+   - The in-memory `DFIR::VirtualInstrument&` argument requires the G
+     front-end (load+parse+compile of the .vi) which exists only inside
+     the LabVIEW process; no exported file-loader exists (only
+     `Node::GetVirtualInstrument` - graph navigation, not loading).
+3. **Plain COM cannot reach the private method**: via
+   `CreateObject("LabVIEW.Application")` + `GetVIReference`, calling
+   `vi.CompileToDFIRCPP(...)` -> error 438 "Object doesn't support this
+   property or method" (verified). Private methods are only visible to
+   Invoke Nodes inside G (VI Scripting).
+4. **Run-Time Engine has no compiler**: lvrt.dll exports only
+   `MakeTDRFromDSTM`; no DFIR front-end, no emitter.
+
+Also: the generated C++ program itself is NOT standalone-linkable -
+it references `DFIR::TestUtil::MakeValue/MakeTDR/NodeConnectionSpecification`
+which have ZERO exports (internal class, RTTI-only). It is a
+reconstruction spec for NI's internal test harness.
+
+**Conclusion**: a running LabVIEW + a minimal G wrapper is the only
+working host for the private method. Gateway.vi already is that
+wrapper; alternatives (lva Scripting Server workers) are equivalent.
+LabVIEW.exe exports (2486) contain no DFIR-CPP symbols; its method
+dispatch lives in `resource\lvserver.rsc` + internal tables.
