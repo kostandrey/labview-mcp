@@ -3393,3 +3393,34 @@ CRC-16_port_prompt.md (assembled prompt); _service/tmp/crc16_port.cpp
 Gotchas: str.format on a template that embeds C++ code must NOT
 include the code (braces -> KeyError) - format the head, append the
 fenced code; literal `{ }` in template text needs `{{ }}`.
+
+## v3.54 (2026-11-03) - MotConCon/TSH recon: the reusable stepv2 stack
+
+Big project: convert "Continuous2D moco.vi" (Translating Sample
+Holder, 2 motors as a group) to Python. Simplified scope per user:
+StepV2 only, UDP via UFS ComPortService only, ALL patterns run in the
+firmware (TSH groups). Sub-agent analysis (specs in session) verified:
+
+- `UFS Commons\COM_PortService\StepV2Config\stepv2\` is a complete
+  reusable client: transport.py (UDP ComPortService client, discovery
+  49999, keepalive), protocol.py (framing + CRC-16 + CMD_*),
+  commands.py (Device: all motor/group/TSH methods incl.
+  tsh_start/tsh_go_pos/tsh_get_pos/tsh_home). The LabVIEW RSt_*
+  builders + SharedCOM/Remote_UDP are fully covered by it.
+- Wire format identical: [ADR][LEN=3+len][CH][CMD][DATA][CRC-lo,hi],
+  f32 little-endian; the server injects requestIDs (LEN excludes it).
+- Payload mapping for cmd 134 (ConvertMotionParams.vi, verified
+  against TSH_step.ino): x0=Shift, x1=Shift+Width, y0=Lift,
+  y1=Lift+Height; raster step=R_step/to_end=0.3*R_step; random
+  step=0.3*dim/10, to_end=dim/10; oval/CrM step=0,
+  to_end=dim*Oval/100; speed_x=speed_y=Speed (clamped to Limits.Speed).
+  to_end_* are EARLY-TRIGGER TOLERANCES, not bounds. Firmware has NO
+  pause (stop wipes state; resume restarts from x0,y0). Raster ignores
+  step_x (stepX:=x1-x0). Original BUG: UI pattern 5 (CrM-1axis) cast
+  into a 4-item enum -> out of range; map explicitly to mode 4.
+- Original 'Set Current' button is UNWIRED (do not port).
+- Deliverable: `gen/MotConCon/PythonApp/` (main.py + moco/ + vendored
+  stepv2/), committed 98aa643; mapping regression tests pass.
+- Agent lessons: parallel extract_vi works; agents viewing many PNGs
+  die on the 50-image tool limit - instruct them strings-only; a
+  canceled agent returns {"error":"User canceled"}.
