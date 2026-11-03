@@ -3419,8 +3419,17 @@ firmware (TSH groups). Sub-agent analysis (specs in session) verified:
   step_x (stepX:=x1-x0). Original BUG: UI pattern 5 (CrM-1axis) cast
   into a 4-item enum -> out of range; map explicitly to mode 4.
 - Original 'Set Current' button is UNWIRED (do not port).
-- Deliverable: `gen/MotConCon/PythonApp/` (main.py + moco/ + vendored
-  stepv2/), committed 98aa643; mapping regression tests pass.
+- Deliverable: the complete app now lives at
+  **`C:\UltrafastSystems\UFS2020\UFS Commons\TshMoco\`** (moved out of
+  this repo 2026-11-03; continues in a separate Zed project - this repo
+  remains the LabVIEW assistant MCP). Layout: main.py + moco/
+  (patterns/config/controller/ui) + vendored stepv2/ + tests.
+  Mapping regression tests pass; worker thread must start at app init
+  (discovery precedes connect) and is NEVER stopped (a queued job may
+  call disconnect -> joining the current thread = RuntimeError).
+  Discovery/connection must reuse ComPortService.discover + the
+  server/udpPort/comPort dict from its device list (hand-rolled UDP
+  broadcast misses the loopback unicast and the JSON schema).
 - Agent lessons: parallel extract_vi works; agents viewing many PNGs
   die on the 50-image tool limit - instruct them strings-only; a
   canceled agent returns {"error":"User canceled"}.
