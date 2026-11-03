@@ -1,6 +1,11 @@
 # --- service / temporary files (extract results, scratch, run copies) ---
 /_service/
 
+# --- TSH conversion project (lives in UFS2020/UFS Commons/TshMoco; the
+#     LabVIEW sources and sub-agent extract scratch stay local-only) ---
+/_spec_extract/
+/gen/MotConCon/
+
 # --- local-only side folder (see its README; do not commit) ---
 /_trial_study/
 
